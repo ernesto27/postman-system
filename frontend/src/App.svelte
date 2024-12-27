@@ -10,6 +10,16 @@
   function greet() {
     Greet(name).then(result => resultText = result)
   }
+
+  async function handleSend() {
+    try {
+      const response = await fetch('http://localhost:8080/admin/login');
+      const data = await response.text(); // Changed from response.json() to response.text()
+      alert(data);
+    } catch (error) {
+      alert('Error: ' + error.message);
+    }
+  }
 </script>
 
 <main class="min-h-screen bg-gray-900 text-gray-100">
@@ -33,7 +43,10 @@
             placeholder="Enter request URL"
             class="flex-1 bg-gray-700 text-gray-300 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-          <button class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors">
+          <button 
+            class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors"
+            on:click={handleSend}
+          >
             Send
           </button>
         </div>
