@@ -1,23 +1,77 @@
 <script>
   import logo from './assets/images/logo-universal.png'
-  import {Greet} from '../wailsjs/go/main/App.js'
+  import { MakeRequest } from '../wailsjs/go/main/App.js'
 
-  let resultText = "Please enter your name below 👇"
-  let name
   let selectedMethod = 'GET'
+  let url = 'https://jsonplaceholder.typicode.com/posts'
   const methods = ['GET', 'POST', 'PUT', 'DELETE']
+  let isLoading = false;
+  let responseData = '';
 
-  function greet() {
-    Greet(name).then(result => resultText = result)
+  // Query params management
+  let queryParams = [{ key: '', value: '' }];
+
+  function addQueryParam() {
+    queryParams = [...queryParams, { key: '', value: '' }];
   }
 
-  async function handleSend() {
+  function removeQueryParam(index) {
+    queryParams = queryParams.filter((_, i) => i !== index);
+    // Update URL after removing parameter
+    const newUrl = buildUrl();
+    if (newUrl !== url) {
+      url = newUrl;
+    }
+  }
+
+  function buildUrl() {
     try {
-      const response = await fetch('http://localhost:8080/admin/login');
-      const data = await response.text(); // Changed from response.json() to response.text()
-      alert(data);
+      const urlParts = url.split('?')[0];
+      const baseUrl = new URL(urlParts);
+      
+      baseUrl.search = '';
+      
+      queryParams.forEach(param => {
+        if (param.key.trim() && param.value.trim()) {
+          baseUrl.searchParams.set(param.key.trim(), param.value.trim());
+        }
+      });
+      
+      return baseUrl.toString();
     } catch (error) {
-      alert('Error: ' + error.message);
+      return url;
+    }
+  }
+
+  function handleSend() {
+    isLoading = true;
+    responseData = '';
+    const finalUrl = buildUrl();
+    
+    MakeRequest(selectedMethod, finalUrl)
+      .then(response => {
+        console.log(response)
+        responseData = response;
+      })
+      .catch(err => {
+        console.error(err);
+        responseData = `Error: ${err}`;
+      })
+      .finally(() => {
+        isLoading = false;
+      });
+  }
+
+  function handleKeyPress(event) {
+    if (event.key === 'Enter') {
+      handleSend();
+    }
+  }
+
+  function handleParamChange() {
+    const newUrl = buildUrl();
+    if (newUrl !== url) {
+      url = newUrl;
     }
   }
 </script>
@@ -39,15 +93,22 @@
             {/each}
           </select>
           <input 
+            bind:value={url}
             type="text" 
             placeholder="Enter request URL"
+            on:keypress={handleKeyPress}
             class="flex-1 bg-gray-700 text-gray-300 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
           <button 
-            class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors"
+            class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors disabled:opacity-50"
             on:click={handleSend}
+            disabled={isLoading}
           >
-            Send
+            {#if isLoading}
+              Loading...
+            {:else}
+              Send
+            {/if}
           </button>
         </div>
       </div>
@@ -67,28 +128,47 @@
         
         <!-- Request Content Area -->
         <div class="bg-gray-900 rounded-lg p-4">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="col-span-1">
-              <label class="block text-sm text-gray-400 mb-2">Key</label>
-              <input 
-                type="text" 
-                class="w-full bg-gray-700 text-gray-300 px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-            </div>
-            <div class="col-span-1">
-              <label class="block text-sm text-gray-400 mb-2">Value</label>
-              <input 
-                type="text" 
-                class="w-full bg-gray-700 text-gray-300 px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-            </div>
-            <div class="col-span-1">
-              <label class="block text-sm text-gray-400 mb-2">Description</label>
-              <input 
-                type="text" 
-                class="w-full bg-gray-700 text-gray-300 px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-            </div>
+          <div class="space-y-4">
+            {#each queryParams as param, i}
+              <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                <div class="col-span-2">
+                  <label class="block text-sm text-gray-400 mb-2">Key</label>
+                  <input 
+                    bind:value={param.key}
+                    on:input={handleParamChange}
+                    type="text" 
+                    class="w-full bg-gray-700 text-gray-300 px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                </div>
+                <div class="col-span-2">
+                  <label class="block text-sm text-gray-400 mb-2">Value</label>
+                  <input 
+                    bind:value={param.value}
+                    on:input={handleParamChange}
+                    type="text" 
+                    class="w-full bg-gray-700 text-gray-300 px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                </div>
+                <div class="col-span-2 flex gap-2">
+                  {#if i === queryParams.length - 1}
+                    <button 
+                      on:click={addQueryParam}
+                      class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md"
+                    >
+                      Add
+                    </button>
+                  {/if}
+                  {#if queryParams.length > 1}
+                    <button 
+                      on:click={() => removeQueryParam(i)}
+                      class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md"
+                    >
+                      Remove
+                    </button>
+                  {/if}
+                </div>
+              </div>
+            {/each}
           </div>
         </div>
       </div>
@@ -103,18 +183,14 @@
         </div>
         
         <div class="bg-gray-900 rounded-lg p-4">
-          <pre class="font-mono text-sm text-gray-300 whitespace-pre-wrap min-h-[200px]">
-{@html `{
-  "status": "success",
-  "message": "Data retrieved successfully",
-  "data": {
-    "id": 1,
-    "name": "Example"
-  }
-}`}
-          </pre>
+          <div class="max-h-[600px] max-w-[1200px] overflow-y-auto overflow-x-auto break-word">
+            <pre class="text-sm overflow-x-auto"><code class="language-auto">{isLoading ? 'Loading...' : responseData}</code></pre>
+          </div>
         </div>
       </div>
+
     </div>
+
   </div>
+  
 </main>
