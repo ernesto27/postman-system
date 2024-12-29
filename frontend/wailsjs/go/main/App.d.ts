@@ -3,4 +3,4 @@
 
 export function Greet(arg1:string):Promise<string>;
 
-export function MakeRequest(arg1:string,arg2:string):Promise<{[key: string]: any}>;
+export function MakeRequest(arg1:string,arg2:string,arg3:{[key: string]: string}):Promise<{[key: string]: any}>;
