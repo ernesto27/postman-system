@@ -7,6 +7,21 @@
   const methods = ['GET', 'POST', 'PUT', 'DELETE']
   let isLoading = false;
   let responseData = '';
+  let responseStatus = '';
+  let activeTab = 'params'
+  let activeResponseTab = 'response'
+  
+  // Headers management
+  let requestHeaders = [{ key: '', value: '' }]
+  let responseHeaders = {}
+
+  function addHeader() {
+    requestHeaders = [...requestHeaders, { key: '', value: '' }]
+  }
+
+  function removeHeader(index) {
+    requestHeaders = requestHeaders.filter((_, i) => i !== index)
+  }
 
   // Query params management
   let queryParams = [{ key: '', value: '' }];
@@ -46,12 +61,23 @@
   function handleSend() {
     isLoading = true;
     responseData = '';
+    responseStatus = '';
     const finalUrl = buildUrl();
     
-    MakeRequest(selectedMethod, finalUrl)
+    // Build headers object
+    const headers = {}
+    requestHeaders.forEach(header => {
+      if (header.key.trim() && header.value.trim()) {
+        headers[header.key.trim()] = header.value.trim()
+      }
+    })
+    
+    MakeRequest(selectedMethod, finalUrl, headers)
       .then(response => {
         console.log(response)
-        responseData = response;
+        responseData = response.body;
+        responseHeaders = response.headers;
+        responseStatus = response.status;
       })
       .catch(err => {
         console.error(err);
@@ -120,71 +146,143 @@
       <div class="bg-gray-800 rounded-lg p-4">
         <div class="border-b border-gray-700 mb-4">
           <div class="flex gap-4">
-            <button class="px-4 py-2 text-blue-500 border-b-2 border-blue-500">Params</button>
-            <button class="px-4 py-2 text-gray-400 hover:text-gray-300">Headers</button>
-            <button class="px-4 py-2 text-gray-400 hover:text-gray-300">Body</button>
+            <button 
+              class="px-4 py-2 {activeTab === 'params' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-gray-400 hover:text-gray-300'}"
+              on:click={() => activeTab = 'params'}
+            >Params</button>
+            <button 
+              class="px-4 py-2 {activeTab === 'headers' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-gray-400 hover:text-gray-300'}"
+              on:click={() => activeTab = 'headers'}
+            >Headers</button>
+            <button 
+              class="px-4 py-2 {activeTab === 'body' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-gray-400 hover:text-gray-300'}"
+              on:click={() => activeTab = 'body'}
+            >Body</button>
           </div>
         </div>
         
         <!-- Request Content Area -->
         <div class="bg-gray-900 rounded-lg p-4">
-          <div class="space-y-4">
-            {#each queryParams as param, i}
-              <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                <div class="col-span-2">
-                  <label class="block text-sm text-gray-400 mb-2">Key</label>
-                  <input 
-                    bind:value={param.key}
-                    on:input={handleParamChange}
-                    type="text" 
-                    class="w-full bg-gray-700 text-gray-300 px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                </div>
-                <div class="col-span-2">
-                  <label class="block text-sm text-gray-400 mb-2">Value</label>
-                  <input 
-                    bind:value={param.value}
-                    on:input={handleParamChange}
-                    type="text" 
-                    class="w-full bg-gray-700 text-gray-300 px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                </div>
-                <div class="col-span-2 flex gap-2">
-                  {#if i === queryParams.length - 1}
-                    <button 
-                      on:click={addQueryParam}
-                      class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md"
+          {#if activeTab === 'params'}
+            <div class="space-y-4">
+              {#each queryParams as param, i}
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                  <div class="col-span-2">
+                    <label class="block text-sm text-gray-400 mb-2">Key</label>
+                    <input 
+                      bind:value={param.key}
+                      on:input={handleParamChange}
+                      type="text" 
+                      class="w-full bg-gray-700 text-gray-300 px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      Add
-                    </button>
-                  {/if}
-                  {#if queryParams.length > 1}
-                    <button 
-                      on:click={() => removeQueryParam(i)}
-                      class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md"
+                  </div>
+                  <div class="col-span-2">
+                    <label class="block text-sm text-gray-400 mb-2">Value</label>
+                    <input 
+                      bind:value={param.value}
+                      on:input={handleParamChange}
+                      type="text" 
+                      class="w-full bg-gray-700 text-gray-300 px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      Remove
-                    </button>
-                  {/if}
+                  </div>
+                  <div class="col-span-2 flex gap-2">
+                    {#if i === queryParams.length - 1}
+                      <button 
+                        on:click={addQueryParam}
+                        class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md"
+                      >
+                        Add
+                      </button>
+                    {/if}
+                    {#if queryParams.length > 1}
+                      <button 
+                        on:click={() => removeQueryParam(i)}
+                        class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md"
+                      >
+                        Remove
+                      </button>
+                    {/if}
+                  </div>
                 </div>
-              </div>
-            {/each}
-          </div>
+              {/each}
+            </div>
+          {:else if activeTab === 'headers'}
+            <div class="space-y-4">
+              {#each requestHeaders as header, i}
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                  <div class="col-span-2">
+                    <label class="block text-sm text-gray-400 mb-2">Key</label>
+                    <input 
+                      bind:value={header.key}
+                      type="text" 
+                      class="w-full bg-gray-700 text-gray-300 px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                  </div>
+                  <div class="col-span-2">
+                    <label class="block text-sm text-gray-400 mb-2">Value</label>
+                    <input 
+                      bind:value={header.value}
+                      type="text" 
+                      class="w-full bg-gray-700 text-gray-300 px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                  </div>
+                  <div class="col-span-2 flex gap-2">
+                    {#if i === requestHeaders.length - 1}
+                      <button 
+                        on:click={addHeader}
+                        class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md"
+                      >
+                        Add
+                      </button>
+                    {/if}
+                    {#if requestHeaders.length > 1}
+                      <button 
+                        on:click={() => removeHeader(i)}
+                        class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md"
+                      >
+                        Remove
+                      </button>
+                    {/if}
+                  </div>
+                </div>
+              {/each}
+            </div>
+          {/if}
         </div>
       </div>
 
       <!-- Response Section -->
       <div class="bg-gray-800 rounded-lg p-4">
+        <!-- Add status display -->
+        {#if responseStatus}
+          <div class="mb-4 flex items-center gap-2">
+            <span class="font-semibold">Status:</span>
+            <span class={responseStatus.startsWith('2') ? 'text-green-400' : responseStatus.startsWith('4') || responseStatus.startsWith('5') ? 'text-red-400' : 'text-yellow-400'}>
+              {responseStatus}
+            </span>
+          </div>
+        {/if}
+        
         <div class="border-b border-gray-700 mb-4">
           <div class="flex gap-4">
-            <button class="px-4 py-2 text-blue-500 border-b-2 border-blue-500">Response</button>
-            <button class="px-4 py-2 text-gray-400 hover:text-gray-300">Headers</button>
+            <button 
+              class="px-4 py-2 {activeResponseTab === 'response' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-gray-400 hover:text-gray-300'}"
+              on:click={() => activeResponseTab = 'response'}
+            >Response</button>
+            <button 
+              class="px-4 py-2 {activeResponseTab === 'headers' ? 'text-blue-500 border-b-2 border-blue-500' : 'text-gray-400 hover:text-gray-300'}"
+              on:click={() => activeResponseTab = 'headers'}
+            >Headers</button>
           </div>
         </div>
         
         <div class="bg-gray-900 rounded-lg p-4">
           <div class="max-h-[600px] max-w-[1200px] overflow-y-auto overflow-x-auto break-word">
-            <pre class="text-sm overflow-x-auto"><code class="language-auto">{isLoading ? 'Loading...' : responseData}</code></pre>
+            {#if activeResponseTab === 'response'}
+              <pre class="text-sm overflow-x-auto"><code class="language-auto">{isLoading ? 'Loading...' : responseData}</code></pre>
+            {:else if activeResponseTab === 'headers'}
+              <pre class="text-sm overflow-x-auto"><code class="language-auto">{isLoading ? 'Loading...' : JSON.stringify(responseHeaders, null, 2)}</code></pre>
+            {/if}
           </div>
         </div>
       </div>

@@ -29,23 +29,36 @@ func (a *App) Greet(name string) string {
 }
 
 // MakeRequest handles HTTP requests from the frontend
-func (a *App) MakeRequest(method string, url string) (string, error) {
+func (a *App) MakeRequest(method string, url string) (map[string]interface{}, error) {
 	client := &http.Client{}
 	req, err := http.NewRequest(method, url, nil)
 	if err != nil {
-		return "", err
+		return nil, fmt.Errorf("failed to create request: %v", err)
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", err
+		return nil, fmt.Errorf("failed to execute request: %v", err)
 	}
 	defer resp.Body.Close()
 
+	// Read body
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", err
+		return nil, fmt.Errorf("failed to read response body: %v", err)
 	}
 
-	return string(body), nil
+	// Prepare response headers
+	responseHeaders := make(map[string]string)
+	for key, values := range resp.Header {
+		if len(values) > 0 {
+			responseHeaders[key] = values[0]
+		}
+	}
+
+	return map[string]interface{}{
+		"body":    string(body),
+		"headers": responseHeaders,
+		"status":  resp.Status,
+	}, nil
 }
