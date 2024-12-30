@@ -9,6 +9,16 @@ import (
 	"strings"
 )
 
+// RequestParams represents the parameters for making an HTTP request
+type RequestParams struct {
+	Method   string            `json:"method"`
+	URL      string            `json:"url"`
+	Headers  map[string]string `json:"headers"`
+	Body     string            `json:"body"`
+	FormData map[string]string `json:"formData"`
+	BodyType string            `json:"bodyType"`
+}
+
 // App struct
 type App struct {
 	ctx context.Context
@@ -31,36 +41,27 @@ func (a *App) Greet(name string) string {
 }
 
 // MakeRequest handles HTTP requests from the frontend
-func (a *App) MakeRequest(
-	method string,
-	urlRequest string,
-	headersRequest map[string]string,
-	bodyRequest string,
-	formData map[string]string,
-	bodyType string,
-) (map[string]interface{}, error) {
+func (a *App) MakeRequest(params RequestParams) (map[string]interface{}, error) {
 	client := &http.Client{}
 
 	var reqBody io.Reader
 
-	if bodyType == "form-data" && len(formData) > 0 {
-
+	if params.BodyType == "form-data" && len(params.FormData) > 0 {
 		form := url.Values{}
-		for key, value := range formData {
+		for key, value := range params.FormData {
 			form.Add(key, value)
 		}
 		reqBody = strings.NewReader(form.Encode())
-
-	} else if bodyType == "raw" {
-		reqBody = strings.NewReader(bodyRequest)
+	} else if params.BodyType == "raw" {
+		reqBody = strings.NewReader(params.Body)
 	}
 
-	req, err := http.NewRequest(method, urlRequest, reqBody)
+	req, err := http.NewRequest(params.Method, params.URL, reqBody)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %v", err)
 	}
 
-	for key, value := range headersRequest {
+	for key, value := range params.Headers {
 		req.Header.Add(key, value)
 	}
 

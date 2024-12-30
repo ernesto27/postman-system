@@ -93,7 +93,16 @@
       }
     })
     
-    MakeRequest(selectedMethod, finalUrl, headers, requestBody, formDataObject, bodyType)
+    const requestParams = {
+      method: selectedMethod,
+      url: finalUrl,
+      headers: headers,
+      body: requestBody,
+      formData: formDataObject,
+      bodyType: bodyType
+    };
+    
+    MakeRequest(requestParams)
       .then(response => {
         console.log(response)
         responseData = response.body;
