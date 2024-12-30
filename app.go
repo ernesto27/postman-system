@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -30,15 +31,36 @@ func (a *App) Greet(name string) string {
 }
 
 // MakeRequest handles HTTP requests from the frontend
-func (a *App) MakeRequest(method string, url string, headers map[string]string, bodyRequest string) (map[string]interface{}, error) {
+func (a *App) MakeRequest(
+	method string,
+	urlRequest string,
+	headersRequest map[string]string,
+	bodyRequest string,
+	formData map[string]string,
+	bodyType string,
+) (map[string]interface{}, error) {
 	client := &http.Client{}
-	req, err := http.NewRequest(method, url, strings.NewReader(bodyRequest))
+
+	var reqBody io.Reader
+
+	if bodyType == "form-data" && len(formData) > 0 {
+
+		form := url.Values{}
+		for key, value := range formData {
+			form.Add(key, value)
+		}
+		reqBody = strings.NewReader(form.Encode())
+
+	} else if bodyType == "raw" {
+		reqBody = strings.NewReader(bodyRequest)
+	}
+
+	req, err := http.NewRequest(method, urlRequest, reqBody)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %v", err)
 	}
 
-	// Add request headers
-	for key, value := range headers {
+	for key, value := range headersRequest {
 		req.Header.Add(key, value)
 	}
 
