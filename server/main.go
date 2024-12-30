@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 )
 
@@ -15,6 +16,17 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			fmt.Printf("%s: %s\n", key, value)
 		}
 	}
+
+	// Read and print body data
+	bodyData, err := io.ReadAll(r.Body)
+	if err != nil {
+		fmt.Printf("Error reading body: %s\n", err)
+		return
+	}
+	defer r.Body.Close()
+
+	fmt.Fprintf(w, "\nBody:\n%s\n", string(bodyData))
+	fmt.Printf("Body:\n%s\n", string(bodyData))
 }
 
 func main() {

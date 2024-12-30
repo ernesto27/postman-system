@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 )
 
 // App struct
@@ -29,9 +30,9 @@ func (a *App) Greet(name string) string {
 }
 
 // MakeRequest handles HTTP requests from the frontend
-func (a *App) MakeRequest(method string, url string, headers map[string]string) (map[string]interface{}, error) {
+func (a *App) MakeRequest(method string, url string, headers map[string]string, bodyRequest string) (map[string]interface{}, error) {
 	client := &http.Client{}
-	req, err := http.NewRequest(method, url, nil)
+	req, err := http.NewRequest(method, url, strings.NewReader(bodyRequest))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %v", err)
 	}

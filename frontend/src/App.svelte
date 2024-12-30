@@ -3,7 +3,8 @@
   import { MakeRequest } from '../wailsjs/go/main/App.js'
 
   let selectedMethod = 'GET'
-  let url = 'https://jsonplaceholder.typicode.com/posts'
+  // let url = 'https://jsonplaceholder.typicode.com/posts'
+  let url = 'http://localhost:8080'
   const methods = ['GET', 'POST', 'PUT', 'DELETE']
   let isLoading = false;
   let responseData = '';
@@ -58,6 +59,8 @@
     }
   }
 
+  let requestBody = '';
+
   function handleSend() {
     isLoading = true;
     responseData = '';
@@ -72,7 +75,7 @@
       }
     })
     
-    MakeRequest(selectedMethod, finalUrl, headers)
+    MakeRequest(selectedMethod, finalUrl, headers, requestBody)
       .then(response => {
         console.log(response)
         responseData = response.body;
@@ -98,6 +101,18 @@
     const newUrl = buildUrl();
     if (newUrl !== url) {
       url = newUrl;
+    }
+  }
+
+  function handleTabKey(event) {
+    if (event.key === 'Tab') {
+      event.preventDefault();
+      const start = event.target.selectionStart;
+      const end = event.target.selectionEnd;
+      const value = event.target.value;
+      
+      event.target.value = value.substring(0, start) + '\t' + value.substring(end);
+      event.target.selectionStart = event.target.selectionEnd = start + 1;
     }
   }
 </script>
@@ -246,6 +261,15 @@
                   </div>
                 </div>
               {/each}
+            </div>
+          {:else if activeTab === 'body'}
+            <div class="space-y-4">
+              <textarea
+                bind:value={requestBody}
+                placeholder="Enter request body (JSON, text, etc.)"
+                on:keydown={handleTabKey}
+                class="w-full h-40 bg-gray-700 text-gray-300 px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+              ></textarea>
             </div>
           {/if}
         </div>
