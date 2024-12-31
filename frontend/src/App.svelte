@@ -13,11 +13,11 @@
   let activeResponseTab = 'response'
   
   // Headers management
-  let requestHeaders = [{ key: '', value: '' }]
+  let requestHeaders = [{ key: '', value: '', enabled: true }]
   let responseHeaders = {}
 
   function addHeader() {
-    requestHeaders = [...requestHeaders, { key: '', value: '' }]
+    requestHeaders = [...requestHeaders, { key: '', value: '', enabled: true }]
   }
 
   function removeHeader(index) {
@@ -90,7 +90,7 @@
     // Build headers object
     const headers = {}
     requestHeaders.forEach(header => {
-      if (header.key.trim() && header.value.trim()) {
+      if (header.enabled && header.key.trim() && header.value.trim()) {
         headers[header.key.trim()] = header.value.trim()
       }
     })
@@ -254,42 +254,55 @@
               {/each}
             </div>
           {:else if activeTab === 'headers'}
-            <div class="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+            <div class="space-y-4 max-h-[200px] overflow-y-auto pr-2 pb-2">
               {#each requestHeaders as header, i}
-                <div class="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
-                  <div class="col-span-2">
-                    <label class="block text-xs text-gray-400 mb-1">Key</label>
+                <div class="grid grid-cols-1 md:grid-cols-[24px_2fr_2fr] gap-4 items-end">
+                  <div class="flex items-end">
+                    <div class="h-[24px] flex items-center">
+                      <input 
+                        type="checkbox"
+                        bind:checked={header.enabled}
+                        class="w-3 h-3 rounded bg-gray-700 border-gray-600 text-blue-600 focus:ring-1 focus:ring-blue-600 focus:ring-offset-1 focus:ring-offset-gray-900 cursor-pointer"
+                      >
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-xs text-gray-400 mb-0.5">Key</label>
                     <input 
                       bind:value={header.key}
                       type="text" 
-                      class="w-full bg-gray-700 text-gray-300 px-2 py-1 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      class="w-full bg-gray-700 text-gray-300 px-3 py-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm {!header.enabled ? 'opacity-50' : ''}"
+                      disabled={!header.enabled}
                     >
                   </div>
-                  <div class="col-span-2">
-                    <label class="block text-xs text-gray-400 mb-1">Value</label>
-                    <input 
-                      bind:value={header.value}
-                      type="text" 
-                      class="w-full bg-gray-700 text-gray-300 px-2 py-1 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    >
-                  </div>
-                  <div class="col-span-2 flex gap-2">
-                    {#if i === requestHeaders.length - 1}
-                      <button 
-                        on:click={addHeader}
-                        class="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm"
+                  <div>
+                    <label class="block text-xs text-gray-400 mb-0.5">Value</label>
+                    <div class="flex gap-2">
+                      <input 
+                        bind:value={header.value}
+                        type="text" 
+                        class="w-full bg-gray-700 text-gray-300 px-3 py-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm {!header.enabled ? 'opacity-50' : ''}"
+                        disabled={!header.enabled}
                       >
-                        Add
-                      </button>
-                    {/if}
-                    {#if requestHeaders.length > 1}
-                      <button 
-                        on:click={() => removeHeader(i)}
-                        class="px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm"
-                      >
-                        Remove
-                      </button>
-                    {/if}
+                      <div class="flex gap-2">
+                        {#if i === requestHeaders.length - 1}
+                          <button 
+                            on:click={addHeader}
+                            class="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm"
+                          >
+                            Add
+                          </button>
+                        {/if}
+                        {#if requestHeaders.length > 1}
+                          <button 
+                            on:click={() => removeHeader(i)}
+                            class="px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm"
+                          >
+                            Remove
+                          </button>
+                        {/if}
+                      </div>
+                    </div>
                   </div>
                 </div>
               {/each}
