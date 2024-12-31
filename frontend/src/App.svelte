@@ -3,8 +3,8 @@
   import { MakeRequest } from '../wailsjs/go/main/App.js'
 
   let selectedMethod = 'GET'
-  //let url = 'https://jsonplaceholder.typicode.com/posts'
-  let url = 'http://localhost:8080'
+  let url = 'https://jsonplaceholder.typicode.com/posts'
+  //let url = 'http://localhost:8080'
   const methods = ['GET', 'POST', 'PUT', 'DELETE']
   let isLoading = false;
   let responseData = '';
@@ -25,18 +25,28 @@
   }
 
   // Query params management
-  let queryParams = [{ key: '', value: '' }];
+  let queryParams = [{ key: '', value: '', enabled: true }];
 
   function addQueryParam() {
-    queryParams = [...queryParams, { key: '', value: '' }];
+    queryParams = [...queryParams, { key: '', value: '', enabled: true }];
   }
 
-  function removeQueryParam(index) {
-    queryParams = queryParams.filter((_, i) => i !== index);
-    // Update URL after removing parameter
-    const newUrl = buildUrl();
-    if (newUrl !== url) {
-      url = newUrl;
+
+
+  function handleQueryParamValueKeyPress(event, index) {
+    if (event.key === 'Enter') {
+      if (index === queryParams.length - 1 && 
+          (queryParams[index].key.trim() || queryParams[index].value.trim())) {
+        addQueryParam();
+        
+        setTimeout(() => {
+          const inputs = document.querySelectorAll('.param-input');
+          const nextInput = inputs[inputs.length - 2]; // New row's key field
+          if (nextInput) {
+            nextInput.focus();
+          }
+        }, 0);
+      }
     }
   }
 
@@ -48,7 +58,7 @@
       baseUrl.search = '';
       
       queryParams.forEach(param => {
-        if (param.key.trim() && param.value.trim()) {
+        if (param.enabled && param.key.trim() && param.value.trim()) {
           baseUrl.searchParams.set(param.key.trim(), param.value.trim());
         }
       });
@@ -206,58 +216,53 @@
         <!-- Request Content Area -->
         <div class="bg-gray-900 rounded-lg p-4">
           {#if activeTab === 'params'}
-            <div class="space-y-4">
+            <div class="space-y-4 max-h-[200px] overflow-y-auto pr-2 pb-2">
               {#each queryParams as param, i}
-                <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                  <div class="col-span-2">
-                    <label class="block text-xs text-gray-400 mb-1">Key</label>
+                <div class="grid grid-cols-1 md:grid-cols-[24px_2fr_2fr] gap-4 items-end">
+                  <div class="flex items-end">
+                    <div class="h-[24px] flex items-center">
+                      <input 
+                        type="checkbox"
+                        bind:checked={param.enabled}
+                        on:change={handleParamChange}
+                        class="w-3 h-3 rounded bg-gray-700 border-gray-600 text-blue-600 focus:ring-1 focus:ring-blue-600 focus:ring-offset-1 focus:ring-offset-gray-900 cursor-pointer"
+                      >
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-xs text-gray-400 mb-0.5">Key</label>
                     <input 
                       bind:value={param.key}
                       on:input={handleParamChange}
                       type="text" 
-                      class="w-full bg-gray-700 text-gray-300 px-3 py-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      class="param-input w-full bg-gray-700 text-gray-300 px-3 py-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm {!param.enabled ? 'opacity-50' : ''}"
+                      disabled={!param.enabled}
                     >
                   </div>
-                  <div class="col-span-2">
-                    <label class="block text-xs text-gray-400 mb-1">Value</label>
+                  <div>
+                    <label class="block text-xs text-gray-400 mb-0.5">Value</label>
                     <input 
                       bind:value={param.value}
                       on:input={handleParamChange}
+                      on:keypress={(e) => handleQueryParamValueKeyPress(e, i)}
                       type="text" 
-                      class="w-full bg-gray-700 text-gray-300 px-3 py-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      class="param-input w-full bg-gray-700 text-gray-300 px-3 py-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm {!param.enabled ? 'opacity-50' : ''}"
+                      disabled={!param.enabled}
                     >
-                  </div>
-                  <div class="col-span-2 flex gap-2">
-                    {#if i === queryParams.length - 1}
-                      <button 
-                        on:click={addQueryParam}
-                        class="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm"
-                      >
-                        Add
-                      </button>
-                    {/if}
-                    {#if queryParams.length > 1}
-                      <button 
-                        on:click={() => removeQueryParam(i)}
-                        class="px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm"
-                      >
-                        Remove
-                      </button>
-                    {/if}
                   </div>
                 </div>
               {/each}
             </div>
           {:else if activeTab === 'headers'}
-            <div class="space-y-4">
+            <div class="space-y-4 max-h-[400px] overflow-y-auto pr-2">
               {#each requestHeaders as header, i}
-                <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
                   <div class="col-span-2">
                     <label class="block text-xs text-gray-400 mb-1">Key</label>
                     <input 
                       bind:value={header.key}
                       type="text" 
-                      class="w-full bg-gray-700 text-gray-300 px-3 py-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      class="w-full bg-gray-700 text-gray-300 px-2 py-1 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     >
                   </div>
                   <div class="col-span-2">
@@ -265,7 +270,7 @@
                     <input 
                       bind:value={header.value}
                       type="text" 
-                      class="w-full bg-gray-700 text-gray-300 px-3 py-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      class="w-full bg-gray-700 text-gray-300 px-2 py-1 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     >
                   </div>
                   <div class="col-span-2 flex gap-2">
