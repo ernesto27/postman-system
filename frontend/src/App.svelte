@@ -3,8 +3,8 @@
   import { MakeRequest } from '../wailsjs/go/main/App.js'
 
   let selectedMethod = 'GET'
-  let url = 'https://jsonplaceholder.typicode.com/posts'
-  //let url = 'http://localhost:8080'
+  //let url = 'https://jsonplaceholder.typicode.com/posts'
+  let url = 'http://localhost:8080'
   const methods = ['GET', 'POST', 'PUT', 'DELETE']
   let isLoading = false;
   let responseData = '';
@@ -20,8 +20,12 @@
     requestHeaders = [...requestHeaders, { key: '', value: '', enabled: true }]
   }
 
-  function removeHeader(index) {
-    requestHeaders = requestHeaders.filter((_, i) => i !== index)
+
+
+  function handleHeaderKeyFocus(index) {
+    if (index === requestHeaders.length - 1) {
+      addHeader();
+    }
   }
 
   // Query params management
@@ -31,22 +35,9 @@
     queryParams = [...queryParams, { key: '', value: '', enabled: true }];
   }
 
-
-
-  function handleQueryParamValueKeyPress(event, index) {
-    if (event.key === 'Enter') {
-      if (index === queryParams.length - 1 && 
-          (queryParams[index].key.trim() || queryParams[index].value.trim())) {
-        addQueryParam();
-        
-        setTimeout(() => {
-          const inputs = document.querySelectorAll('.param-input');
-          const nextInput = inputs[inputs.length - 2]; // New row's key field
-          if (nextInput) {
-            nextInput.focus();
-          }
-        }, 0);
-      }
+  function handleParamKeyFocus(index) {
+    if (index === queryParams.length - 1) {
+      addQueryParam();
     }
   }
 
@@ -71,17 +62,19 @@
 
   let requestBody = '';
   let bodyType = 'raw';
-  let formData = [{ key: '', value: '' }];
+  let formData = [{ key: '', value: '', type: 'text' }];
 
   function addFormDataField() {
-    formData = [...formData, { key: '', value: '' }];
+    formData = [...formData, { key: '', value: '', type: 'text' }];
   }
 
-  function removeFormDataField(index) {
-    formData = formData.filter((_, i) => i !== index);
+  function handleFormDataKeyFocus(index) {
+    if (index === formData.length - 1) {
+      addFormDataField();
+    }
   }
 
-  function handleSend() {
+  async function handleSend() {
     isLoading = true;
     responseData = '';
     responseStatus = '';
@@ -95,20 +88,40 @@
       }
     })
 
-    // Convert form data array to object
-    const formDataObject = {}
-    formData.forEach(item => {
-      if (item.key.trim() && item.value.trim()) {
-        formDataObject[item.key.trim()] = item.value.trim()
+    // Handle form data and files
+    let formDataObj = {};
+    let files = [];
+    
+    if (bodyType === 'form-data') {
+      for (const item of formData) {
+        if (item.key.trim()) {
+          if (item.type === 'file' && item.value instanceof File) {
+            // Convert file to base64
+            const base64 = await new Promise((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result.split(',')[1]);
+              reader.readAsDataURL(item.value);
+            });
+            
+            files.push({
+              fieldName: item.key.trim(),
+              fileName: item.value.name,
+              content: base64
+            });
+          } else if (item.type === 'text' && item.value.trim()) {
+            formDataObj[item.key.trim()] = item.value.trim();
+          }
+        }
       }
-    })
+    }
     
     const requestParams = {
       method: selectedMethod,
       url: finalUrl,
       headers: headers,
-      body: requestBody,
-      formData: formDataObject,
+      body: bodyType === 'raw' ? requestBody : '',
+      formData: formDataObj,
+      files: files,
       bodyType: bodyType
     };
     
@@ -234,6 +247,7 @@
                     <input 
                       bind:value={param.key}
                       on:input={handleParamChange}
+                      on:focus={() => handleParamKeyFocus(i)}
                       type="text" 
                       class="param-input w-full bg-gray-700 text-gray-300 px-3 py-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm {!param.enabled ? 'opacity-50' : ''}"
                       disabled={!param.enabled}
@@ -244,7 +258,6 @@
                     <input 
                       bind:value={param.value}
                       on:input={handleParamChange}
-                      on:keypress={(e) => handleQueryParamValueKeyPress(e, i)}
                       type="text" 
                       class="param-input w-full bg-gray-700 text-gray-300 px-3 py-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm {!param.enabled ? 'opacity-50' : ''}"
                       disabled={!param.enabled}
@@ -262,6 +275,7 @@
                       <input 
                         type="checkbox"
                         bind:checked={header.enabled}
+                        on:change={handleHeaderChange}
                         class="w-3 h-3 rounded bg-gray-700 border-gray-600 text-blue-600 focus:ring-1 focus:ring-blue-600 focus:ring-offset-1 focus:ring-offset-gray-900 cursor-pointer"
                       >
                     </div>
@@ -270,39 +284,22 @@
                     <label class="block text-xs text-gray-400 mb-0.5">Key</label>
                     <input 
                       bind:value={header.key}
+                      on:input={handleHeaderChange}
+                      on:focus={() => handleHeaderKeyFocus(i)}
                       type="text" 
-                      class="w-full bg-gray-700 text-gray-300 px-3 py-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm {!header.enabled ? 'opacity-50' : ''}"
+                      class="header-input w-full bg-gray-700 text-gray-300 px-3 py-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm {!header.enabled ? 'opacity-50' : ''}"
                       disabled={!header.enabled}
                     >
                   </div>
                   <div>
                     <label class="block text-xs text-gray-400 mb-0.5">Value</label>
-                    <div class="flex gap-2">
-                      <input 
-                        bind:value={header.value}
-                        type="text" 
-                        class="w-full bg-gray-700 text-gray-300 px-3 py-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm {!header.enabled ? 'opacity-50' : ''}"
-                        disabled={!header.enabled}
-                      >
-                      <div class="flex gap-2">
-                        {#if i === requestHeaders.length - 1}
-                          <button 
-                            on:click={addHeader}
-                            class="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm"
-                          >
-                            Add
-                          </button>
-                        {/if}
-                        {#if requestHeaders.length > 1}
-                          <button 
-                            on:click={() => removeHeader(i)}
-                            class="px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm"
-                          >
-                            Remove
-                          </button>
-                        {/if}
-                      </div>
-                    </div>
+                    <input 
+                      bind:value={header.value}
+                      on:input={handleHeaderChange}
+                      type="text" 
+                      class="header-input w-full bg-gray-700 text-gray-300 px-3 py-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm {!header.enabled ? 'opacity-50' : ''}"
+                      disabled={!header.enabled}
+                    >
                   </div>
                 </div>
               {/each}
@@ -340,39 +337,48 @@
               {:else if bodyType === 'form-data'}
                 <div class="space-y-4">
                   {#each formData as field, i}
-                    <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                      <div class="col-span-2">
+                    <div class="grid grid-cols-1 md:grid-cols-[2fr_2fr_3fr] gap-4 items-end">
+                      <div>
                         <label class="block text-xs text-gray-400 mb-1">Key</label>
                         <input 
                           bind:value={field.key}
-                          type="text" 
+                          type="text"
+                          on:focus={() => handleFormDataKeyFocus(i)}
                           class="w-full bg-gray-700 text-gray-300 px-3 py-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                         >
                       </div>
-                      <div class="col-span-2">
+                      <div>
+                        <label class="block text-xs text-gray-400 mb-1">Type</label>
+                        <select
+                          bind:value={field.type}
+                          class="w-full bg-gray-700 text-gray-300 px-3 py-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm border border-gray-600 appearance-none cursor-pointer"
+                          style="background-image: url('data:image/svg+xml;utf8,<svg fill=white xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><path d=%22M7 10l5 5 5-5z%22/></svg>'); background-repeat: no-repeat; background-position: right 8px center; padding-right: 24px;"
+                        >
+                          <option value="text" class="bg-gray-700">Text</option>
+                          <option value="file" class="bg-gray-700">File</option>
+                        </select>
+                      </div>
+                      <div>
                         <label class="block text-xs text-gray-400 mb-1">Value</label>
-                        <input 
-                          bind:value={field.value}
-                          type="text" 
-                          class="w-full bg-gray-700 text-gray-300 px-3 py-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                        >
-                      </div>
-                      <div class="col-span-2 flex gap-2">
-                        {#if i === formData.length - 1}
-                          <button 
-                            on:click={addFormDataField}
-                            class="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm"
+                        {#if field.type === 'text'}
+                          <input 
+                            bind:value={field.value}
+                            type="text" 
+                            class="w-full bg-gray-700 text-gray-300 px-3 py-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                           >
-                            Add
-                          </button>
-                        {/if}
-                        {#if formData.length > 1}
-                          <button 
-                            on:click={() => removeFormDataField(i)}
-                            class="px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm"
+                        {:else}
+                          <input 
+                            type="file"
+                            class="block w-full text-sm text-gray-300 
+                              file:mr-4 file:py-1 file:px-4
+                              file:text-sm file:font-medium
+                              file:bg-gray-600 file:text-gray-300
+                              file:rounded-md file:border-0
+                              file:hover:bg-gray-500
+                              focus-within:outline-none focus-within:ring-2 focus-within:ring-blue-500
+                              cursor-pointer"
+                            on:change={(e) => field.value = e.target.files[0]}
                           >
-                            Remove
-                          </button>
                         {/if}
                       </div>
                     </div>

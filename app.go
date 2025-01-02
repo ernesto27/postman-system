@@ -1,13 +1,22 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
-	"net/url"
 	"strings"
 )
+
+// FileData represents a file to be uploaded
+type FileData struct {
+	FieldName string `json:"fieldName"`
+	FileName  string `json:"fileName"`
+	Content   string `json:"content"`
+}
 
 // RequestParams represents the parameters for making an HTTP request
 type RequestParams struct {
@@ -16,6 +25,7 @@ type RequestParams struct {
 	Headers  map[string]string `json:"headers"`
 	Body     string            `json:"body"`
 	FormData map[string]string `json:"formData"`
+	Files    []FileData        `json:"files"`
 	BodyType string            `json:"bodyType"`
 }
 
@@ -46,12 +56,41 @@ func (a *App) MakeRequest(params RequestParams) (map[string]interface{}, error) 
 
 	var reqBody io.Reader
 
-	if params.BodyType == "form-data" && len(params.FormData) > 0 {
-		form := url.Values{}
+	if params.BodyType == "form-data" {
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+
 		for key, value := range params.FormData {
-			form.Add(key, value)
+			if err := writer.WriteField(key, value); err != nil {
+				return nil, fmt.Errorf("failed to write form field: %v", err)
+			}
 		}
-		reqBody = strings.NewReader(form.Encode())
+
+		for _, file := range params.Files {
+			part, err := writer.CreateFormFile(file.FieldName, file.FileName)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create form file: %v", err)
+			}
+
+			decoded, err := base64.StdEncoding.DecodeString(file.Content)
+			if err != nil {
+				return nil, fmt.Errorf("failed to decode file content: %v", err)
+			}
+
+			if _, err := part.Write(decoded); err != nil {
+				return nil, fmt.Errorf("failed to write file content: %v", err)
+			}
+		}
+
+		if err := writer.Close(); err != nil {
+			return nil, fmt.Errorf("failed to close multipart writer: %v", err)
+		}
+
+		reqBody = body
+		if params.Headers == nil {
+			params.Headers = make(map[string]string)
+		}
+		params.Headers["Content-Type"] = writer.FormDataContentType()
 	} else if params.BodyType == "raw" {
 		reqBody = strings.NewReader(params.Body)
 	}
