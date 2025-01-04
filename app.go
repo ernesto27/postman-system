@@ -9,6 +9,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"strings"
+	"time"
 )
 
 // FileData represents a file to be uploaded
@@ -53,6 +54,7 @@ func (a *App) Greet(name string) string {
 // MakeRequest handles HTTP requests from the frontend
 func (a *App) MakeRequest(params RequestParams) (map[string]interface{}, error) {
 	client := &http.Client{}
+	startTime := time.Now()
 
 	var reqBody io.Reader
 
@@ -110,6 +112,8 @@ func (a *App) MakeRequest(params RequestParams) (map[string]interface{}, error) 
 	}
 	defer resp.Body.Close()
 
+	elapsed := time.Since(startTime)
+
 	// Read body
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -118,15 +122,20 @@ func (a *App) MakeRequest(params RequestParams) (map[string]interface{}, error) 
 
 	// Prepare response headers
 	responseHeaders := make(map[string]string)
+	headerSize := 0
 	for key, values := range resp.Header {
 		if len(values) > 0 {
 			responseHeaders[key] = values[0]
+			// Calculate header size: key length + ": " + value length + "\r\n"
+			headerSize += len(key) + 2 + len(values[0]) + 2
 		}
 	}
 
 	return map[string]interface{}{
-		"body":    string(body),
-		"headers": responseHeaders,
-		"status":  resp.Status,
+		"body":          string(body),
+		"headers":       responseHeaders,
+		"status":        resp.Status,
+		"responseSize":  len(body) + headerSize,
+		"timeInSeconds": elapsed.Seconds(),
 	}, nil
 }

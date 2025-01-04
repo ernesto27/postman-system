@@ -11,6 +11,8 @@
   let responseStatus = '';
   let activeTab = 'params'
   let activeResponseTab = 'response'
+  let responseTime = 0;
+  let responseSize = 0;
   
   // Headers management
   let requestHeaders = [{ key: '', value: '', enabled: true }]
@@ -19,8 +21,6 @@
   function addHeader() {
     requestHeaders = [...requestHeaders, { key: '', value: '', enabled: true }]
   }
-
-
 
   function handleHeaderKeyFocus(index) {
     if (index === requestHeaders.length - 1) {
@@ -131,6 +131,8 @@
         responseData = response.body;
         responseHeaders = response.headers;
         responseStatus = response.status;
+        responseTime = response.timeInSeconds;
+        responseSize = response.responseSize;
       })
       .catch(err => {
         console.error(err);
@@ -164,6 +166,16 @@
       event.target.value = value.substring(0, start) + '\t' + value.substring(end);
       event.target.selectionStart = event.target.selectionEnd = start + 1;
     }
+  }
+
+  function formatSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    else return (bytes / 1048576).toFixed(1) + ' MB';
+  }
+
+  function formatTime(seconds) {
+    return (seconds * 1000).toFixed(0) + ' ms';
   }
 </script>
 
@@ -275,7 +287,7 @@
                       <input 
                         type="checkbox"
                         bind:checked={header.enabled}
-                        on:change={handleHeaderChange}
+    
                         class="w-3 h-3 rounded bg-gray-700 border-gray-600 text-blue-600 focus:ring-1 focus:ring-blue-600 focus:ring-offset-1 focus:ring-offset-gray-900 cursor-pointer"
                       >
                     </div>
@@ -284,7 +296,6 @@
                     <label class="block text-xs text-gray-400 mb-0.5">Key</label>
                     <input 
                       bind:value={header.key}
-                      on:input={handleHeaderChange}
                       on:focus={() => handleHeaderKeyFocus(i)}
                       type="text" 
                       class="header-input w-full bg-gray-700 text-gray-300 px-3 py-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm {!header.enabled ? 'opacity-50' : ''}"
@@ -295,7 +306,6 @@
                     <label class="block text-xs text-gray-400 mb-0.5">Value</label>
                     <input 
                       bind:value={header.value}
-                      on:input={handleHeaderChange}
                       type="text" 
                       class="header-input w-full bg-gray-700 text-gray-300 px-3 py-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm {!header.enabled ? 'opacity-50' : ''}"
                       disabled={!header.enabled}
@@ -394,11 +404,21 @@
       <div class="bg-gray-800 rounded-lg p-4">
         <!-- Add status display -->
         {#if responseStatus}
-          <div class="mb-4 flex items-center gap-2">
-            <span class="font-semibold">Status:</span>
-            <span class={responseStatus.startsWith('2') ? 'text-green-400' : responseStatus.startsWith('4') || responseStatus.startsWith('5') ? 'text-red-400' : 'text-yellow-400'}>
-              {responseStatus}
-            </span>
+          <div class="mb-4 flex items-center gap-4 text-sm">
+            <div class="flex items-center gap-2">
+              <span class="font-semibold">Status:</span>
+              <span class={responseStatus.startsWith('2') ? 'text-green-400' : responseStatus.startsWith('4') || responseStatus.startsWith('5') ? 'text-red-400' : 'text-yellow-400'}>
+                {responseStatus}
+              </span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="font-semibold">Time:</span>
+              <span class="text-gray-300">{formatTime(responseTime)}</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="font-semibold">Size:</span>
+              <span class="text-gray-300">{formatSize(responseSize)}</span>
+            </div>
           </div>
         {/if}
         
