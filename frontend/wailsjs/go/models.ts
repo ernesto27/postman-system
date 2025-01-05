@@ -1,5 +1,21 @@
 export namespace main {
 	
+	export class Collection {
+	    user_id: string;
+	    collection_id: number;
+	    name: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Collection(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.user_id = source["user_id"];
+	        this.collection_id = source["collection_id"];
+	        this.name = source["name"];
+	    }
+	}
 	export class FileData {
 	    fieldName: string;
 	    fileName: string;

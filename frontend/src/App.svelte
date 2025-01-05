@@ -2,13 +2,26 @@
   import logo from './assets/images/logo-universal.png'
   import RequestTab from './components/RequestTab.svelte'
   import { onMount } from 'svelte'
+  import { GetCollections, CreateCollection } from '../wailsjs/go/main/App.js'
+  import Modal from './components/Modal.svelte'
   let tabs = []
   let activeTabId = 1
   let nextTabId = 2
   let tabStates = new Map()
+  let collections = [] // Initialize as empty array
 
   // Load saved state from localStorage
   onMount(() => {
+    GetCollections()
+      .then(response => {
+        collections = Array.isArray(response) ? response : []
+        console.log("Collections loaded:", collections)
+      })
+      .catch(err => {
+        console.error("Failed to load collections:", err)
+        collections = [] // Ensure it's an array even on error
+      })
+
     const savedTabs = localStorage.getItem('postman_tabs')
     const savedStates = localStorage.getItem('postman_states')
     
@@ -65,28 +78,25 @@
     localStorage.setItem('postman_states', JSON.stringify([...tabStates]))
   }
 
-  // Hardcoded collections data
-  const collections = [
-    {
-      id: 1,
-      name: 'My Collection 1',
-      requests: [
-        { id: 1, name: 'Get Users', method: 'GET' },
-        { id: 2, name: 'Create User', method: 'POST' }
-      ]
-    },
-    {
-      id: 2,
-      name: 'API Tests',
-      requests: [
-        { id: 3, name: 'Authentication', method: 'POST' },
-        { id: 4, name: 'List Items', method: 'GET' },
-        { id: 5, name: 'Update Item', method: 'PUT' }
-      ]
-    }
-  ]
-
   let isSidebarOpen = true;
+  let showNewCollectionModal = false;
+  let newCollectionName = '';
+
+  function createNewCollection() {
+    if (newCollectionName.trim()) {
+      CreateCollection(newCollectionName.trim(), "1")
+        .then(response => {
+          collections = [...collections, { name: newCollectionName.trim(), requests: [] }];
+          newCollectionName = '';
+          showNewCollectionModal = false;
+          console.log("New collection created:", response)
+        })
+        .catch(err => {
+          alert("Failed to create collection. Please try again.")
+          console.error("Failed to create collection:", err)
+        })
+    }
+  }
 </script>
 
 <main class="min-h-screen bg-gray-900 text-gray-100 text-sm flex">
@@ -94,38 +104,36 @@
   <div class="w-64 bg-gray-800 border-r border-gray-700 flex-shrink-0">
     <div class="p-4">
       <img src={logo} alt="Logo" class="h-8 w-auto mb-6">
-      <!-- Static Collection List -->
+      <!-- Add New Collection Button -->
+      <button
+        class="w-full mb-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white flex items-center justify-center"
+        on:click={() => showNewCollectionModal = true}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+        </svg>
+        New Collection
+      </button>
+      <!-- Dynamic Collection List -->
       <div class="space-y-4">
-        <div class="space-y-2">
-          <div class="flex items-center">
-            <span class="text-gray-300 font-medium">Collection 1</span>
-          </div>
-          <div class="pl-4 space-y-1">
-            <div class="w-full text-left px-2 py-1 rounded hover:bg-gray-700 flex items-center">
-              <span class="text-xs font-medium text-blue-400 w-12">GET</span>
-              <span class="text-gray-400 text-sm truncate">Get Users</span>
+        {#each collections as collection}
+          <div class="space-y-2">
+            <div class="flex items-center">
+              <span class="text-gray-300 font-medium">{collection.name}</span>
             </div>
-            <div class="w-full text-left px-2 py-1 rounded hover:bg-gray-700 flex items-center">
-              <span class="text-xs font-medium text-green-400 w-12">POST</span>
-              <span class="text-gray-400 text-sm truncate">Create User</span>
-            </div>
-          </div>
-        </div>
-        <div class="space-y-2">
-          <div class="flex items-center">
-            <span class="text-gray-300 font-medium">Collection 2</span>
-          </div>
-          <div class="pl-4 space-y-1">
-            <div class="w-full text-left px-2 py-1 rounded hover:bg-gray-700 flex items-center">
-              <span class="text-xs font-medium text-yellow-400 w-12">PUT</span>
-              <span class="text-gray-400 text-sm truncate">Update Item</span>
-            </div>
-            <div class="w-full text-left px-2 py-1 rounded hover:bg-gray-700 flex items-center">
-              <span class="text-xs font-medium text-red-400 w-12">DELETE</span>
-              <span class="text-gray-400 text-sm truncate">Delete Item</span>
+            <div class="pl-4 space-y-1">
+              <!-- {#each collection.requests as request}
+                <div class="w-full text-left px-2 py-1 rounded hover:bg-gray-700 flex items-center">
+                  <span class="text-xs font-medium {request.method === 'GET' ? 'text-blue-400' : 
+                    request.method === 'POST' ? 'text-green-400' : 
+                    request.method === 'PUT' ? 'text-yellow-400' : 
+                    request.method === 'DELETE' ? 'text-red-400' : 'text-gray-400'} w-12">{request.method}</span>
+                  <span class="text-gray-400 text-sm truncate">{request.name}</span>
+                </div>
+              {/each} -->
             </div>
           </div>
-        </div>
+        {/each}
       </div>
     </div>
   </div>
@@ -184,6 +192,32 @@
     </div>
   </div>
 </main>
+
+<!-- New Collection Modal -->
+<Modal show={showNewCollectionModal} title="Create New Collection">
+  <div class="space-y-4">
+    <input
+      type="text"
+      bind:value={newCollectionName}
+      placeholder="Collection Name"
+      class="w-full px-3 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+    />
+    <div class="flex justify-end gap-2">
+      <button
+        class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg"
+        on:click={() => showNewCollectionModal = false}
+      >
+        Cancel
+      </button>
+      <button
+        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg"
+        on:click={createNewCollection}
+      >
+        Create
+      </button>
+    </div>
+  </div>
+</Modal>
 
 <style>
   /* Add any additional styles here */

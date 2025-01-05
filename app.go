@@ -32,7 +32,8 @@ type RequestParams struct {
 
 // App struct
 type App struct {
-	ctx context.Context
+	ctx    context.Context
+	dynamo *DynamoDB
 }
 
 // NewApp creates a new App application struct
@@ -43,12 +44,34 @@ func NewApp() *App {
 // startup is called when the app starts. The context is saved
 // so we can call the runtime methods
 func (a *App) startup(ctx context.Context) {
+	dynamo := NewDynamoDB("", "", "", "")
 	a.ctx = ctx
+	a.dynamo = dynamo
 }
 
 // Greet returns a greeting for the given name
 func (a *App) Greet(name string) string {
 	return fmt.Sprintf("Hello %s, It's show time!", name)
+}
+
+func (a *App) GetCollections() ([]Collection, error) {
+	fmt.Println("Getting collections")
+	collections, err := a.dynamo.GetCollections()
+	if err != nil {
+		return nil, err
+	}
+
+	return collections, nil
+}
+
+func (a *App) CreateCollection(name string, userID string) error {
+	fmt.Println("Creating collection")
+	err := a.dynamo.CreateCollection(name, userID)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	return nil
 }
 
 // MakeRequest handles HTTP requests from the frontend
