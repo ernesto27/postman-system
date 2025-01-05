@@ -313,7 +313,35 @@
           <div class="space-y-4 max-h-[200px] overflow-y-auto pr-2 pb-2">
             {#each requestHeaders as header, i}
               <div class="grid grid-cols-1 md:grid-cols-[24px_2fr_2fr] gap-4 items-end">
-                <!-- ...same structure as params but for headers... -->
+                <div class="flex items-end">
+                  <div class="h-[24px] flex items-center">
+                    <input 
+                      type="checkbox"
+                      bind:checked={header.enabled}
+  
+                      class="w-3 h-3 rounded bg-gray-700 border-gray-600 text-blue-600 focus:ring-1 focus:ring-blue-600 focus:ring-offset-1 focus:ring-offset-gray-900 cursor-pointer"
+                    >
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-400 mb-0.5">Key</label>
+                  <input 
+                    bind:value={header.key}
+                    on:focus={() => handleHeaderKeyFocus(i)}
+                    type="text" 
+                    class="header-input w-full bg-gray-700 text-gray-300 px-3 py-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm {!header.enabled ? 'opacity-50' : ''}"
+                    disabled={!header.enabled}
+                  >
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-400 mb-0.5">Value</label>
+                  <input 
+                    bind:value={header.value}
+                    type="text" 
+                    class="header-input w-full bg-gray-700 text-gray-300 px-3 py-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm {!header.enabled ? 'opacity-50' : ''}"
+                    disabled={!header.enabled}
+                  >
+                </div>
               </div>
             {/each}
           </div>
@@ -365,7 +393,8 @@
                       <label class="block text-xs text-gray-400 mb-1">Type</label>
                       <select
                         bind:value={field.type}
-                        class="w-full bg-gray-700 text-gray-300 px-3 py-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm border border-gray-600"
+                        class="w-full bg-gray-800 text-white font-medium px-3 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border border-gray-700 appearance-none cursor-pointer [&>option]:bg-gray-800 [&>option]:text-white text-sm"
+                        style="background-image: url('data:image/svg+xml;utf8,<svg fill=white xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><path d=%22M7 10l5 5 5-5z%22/></svg>'); background-repeat: no-repeat; background-position: right 8px center; padding-right: 32px;"
                       >
                         <option value="text">Text</option>
                         <option value="file">File</option>
