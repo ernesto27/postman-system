@@ -1,6 +1,7 @@
 <script>
   import logo from './assets/images/logo-universal.png'
   import RequestTab from './components/RequestTab.svelte'
+  import { onMount } from 'svelte';
 
   let tabs = [{ id: 1, title: 'New Request 1' }]
   let activeTabId = 1
@@ -8,6 +9,28 @@
 
   // Store tab states in a map
   let tabStates = new Map()
+
+  let isInitialized = false;
+
+  // Initialize from localStorage
+  onMount(() => {
+    const savedTabs = localStorage.getItem('postman-tabs');
+    const savedStates = localStorage.getItem('postman-states');
+    
+    if (savedTabs) {
+      tabs = JSON.parse(savedTabs);
+      nextTabId = Math.max(...tabs.map(tab => tab.id)) + 1;
+      activeTabId = tabs[0].id;
+    }
+    
+    if (savedStates) {
+      const statesObject = JSON.parse(savedStates);
+      tabStates = new Map(Object.entries(statesObject));
+    }
+    
+    // Mark as initialized after loading saved state
+    isInitialized = true;
+  });
 
   function addNewTab() {
     const newTab = {
@@ -17,6 +40,7 @@
     tabs = [...tabs, newTab]
     activeTabId = nextTabId
     nextTabId++
+    updateLocalStorage();
   }
 
   function removeTab(tabId) {
@@ -26,14 +50,24 @@
     if (activeTabId === tabId && tabs.length > 0) {
       activeTabId = tabs[tabs.length - 1].id
     }
+    updateLocalStorage();
   }
 
   function saveTabState(tabId, state) {
     tabStates.set(tabId, state)
+    updateLocalStorage();
   }
 
   function getTabState(tabId) {
     return tabStates.get(tabId)
+  }
+
+  function updateLocalStorage() {
+    // Only save to localStorage after initial load is complete
+    if (!isInitialized) return;
+    
+    localStorage.setItem('postman-tabs', JSON.stringify(tabs));
+    localStorage.setItem('postman-states', JSON.stringify(Object.fromEntries(tabStates)));
   }
 </script>
 
