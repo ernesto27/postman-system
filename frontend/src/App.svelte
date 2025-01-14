@@ -97,6 +97,14 @@
         })
     }
   }
+
+  let isHistoryOpen = false;
+  const mockHistory = [
+    { method: 'GET', url: 'https://api.example.com/users', timestamp: '2 mins ago' },
+    { method: 'POST', url: 'https://api.example.com/orders', timestamp: '15 mins ago' },
+    { method: 'PUT', url: 'https://api.example.com/products/1', timestamp: '1 hour ago' },
+    { method: 'DELETE', url: 'https://api.example.com/posts/5', timestamp: '2 hours ago' }
+  ];
 </script>
 
 <main class="min-h-screen bg-gray-900 text-gray-100 text-sm flex">
@@ -104,6 +112,7 @@
   <div class="w-64 bg-gray-800 border-r border-gray-700 flex-shrink-0">
     <div class="p-4">
       <img src={logo} alt="Logo" class="h-8 w-auto mb-6">
+      
       <!-- Add New Collection Button -->
       <button
         class="w-full mb-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white flex items-center justify-center"
@@ -114,6 +123,45 @@
         </svg>
         New Collection
       </button>
+
+      <!-- History Button -->
+      <button
+        class="w-full mb-4 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-white flex items-center justify-between"
+        on:click={() => isHistoryOpen = !isHistoryOpen}
+      >
+        <div class="flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
+          </svg>
+          History
+        </div>
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transform {isHistoryOpen ? 'rotate-180' : ''}" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+        </svg>
+      </button>
+
+      <!-- History List -->
+      {#if isHistoryOpen}
+        <div class="mb-6 space-y-2">
+          {#each mockHistory as item}
+            <div class="p-2 hover:bg-gray-700 rounded-lg cursor-pointer">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-medium {
+                  item.method === 'GET' ? 'text-blue-400' : 
+                  item.method === 'POST' ? 'text-green-400' : 
+                  item.method === 'PUT' ? 'text-yellow-400' : 
+                  'text-red-400'
+                }">{item.method}</span>
+                <span class="text-gray-400 text-xs">{item.timestamp}</span>
+              </div>
+              <div class="text-gray-300 text-sm truncate mt-1">
+                {item.url}
+              </div>
+            </div>
+          {/each}
+        </div>
+      {/if}
+
       <!-- Dynamic Collection List -->
       <div class="space-y-4">
         {#each collections as collection}
