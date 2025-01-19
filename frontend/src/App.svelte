@@ -1,14 +1,22 @@
-<script>
+<script lang="ts">
   import logo from './assets/images/logo-universal.png'
   import RequestTab from './components/RequestTab.svelte'
   import { onMount } from 'svelte'
   import { GetCollections, CreateCollection } from '../wailsjs/go/main/App.js'
   import Modal from './components/Modal.svelte'
-  let tabs = []
+
+
+  interface Tab {
+    id?: number;
+    title?: string;
+  }
+
+  let tabs: Tab[] = []
   let activeTabId = 1
   let nextTabId = 2
   let tabStates = new Map()
   let collections = [] // Initialize as empty array
+  import type { PostmanCollection, PostmanItem } from './types/postman.ts';
 
   // Load saved state from localStorage
   onMount(() => {
@@ -27,7 +35,7 @@
     
     if (savedTabs) {
       tabs = JSON.parse(savedTabs)
-      nextTabId = Math.max(...tabs.map(tab => tab.id)) + 1
+      nextTabId = Math.max(...tabs.map(tab => tab.id ?? 0)) + 1
     } else {
       tabs = [{ id: 1, title: 'New Request 1' }]
     }
@@ -50,23 +58,41 @@
     saveTabs()
   }
 
-  function removeTab(tabId) {
+  function removeTab(tabId: number) {
     tabs = tabs.filter(tab => tab.id !== tabId)
     // Clean up the state when removing a tab
     tabStates.delete(tabId)
     if (activeTabId === tabId && tabs.length > 0) {
-      activeTabId = tabs[tabs.length - 1].id
+      activeTabId = tabs[tabs.length - 1].id ?? 1
     }
     saveTabs()
   }
 
-  function saveTabState(tabId, state) {
-    tabStates.set(tabId, state)
-    saveStates()
+  function saveTabState(state: PostmanItem) {
+    const collectionToSave: PostmanCollection = {
+      id: "1",
+      name: "API Testing Collection",
+      items: [state]
+    }
+
+    // collectionToSave.items.push(state)
+
+    localStorage.setItem('collection_1', JSON.stringify(collectionToSave))
+
+    console.log("SAVED STATE", state)
+
+
+    // tabStates.set(tabId, state)
+    // saveStates()
   }
 
-  function getTabState(tabId) {
-    return tabStates.get(tabId)
+  function getTabState() {
+    const collection = localStorage.getItem("collection_1")
+    console.log(collection)
+    const collObj = collection ? JSON.parse(collection) : null
+    console.log(collObj.items[0])
+    return collObj?.items[0]
+    // return tabStates.get(tabId)
   }
 
   // Helper functions to save to localStorage
@@ -232,8 +258,8 @@
         {#if activeTabId === tab.id}
           <RequestTab 
             title={tab.title}
-            savedState={getTabState(tab.id)}
-            onStateChange={(state) => saveTabState(tab.id, state)}
+            savedState={getTabState()}
+            onStateChange={(state) => saveTabState(state)}
           />
         {/if}
       {/each}

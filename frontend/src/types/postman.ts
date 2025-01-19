@@ -66,8 +66,8 @@ export interface PostmanCollection {
   id: string;
   name: string;
   items: PostmanItem[];
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface TabState {
