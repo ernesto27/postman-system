@@ -65,7 +65,7 @@ export interface PostmanItem {
 export interface PostmanCollection {
   id: string;
   name: string;
-  items: PostmanItem[];
+  item: PostmanItem[];
   createdAt?: string;
   updatedAt?: string;
 }

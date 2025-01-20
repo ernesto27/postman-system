@@ -4,7 +4,7 @@
   import { onMount } from 'svelte'
   import { GetCollections, CreateCollection } from '../wailsjs/go/main/App.js'
   import Modal from './components/Modal.svelte'
-
+  import type { PostmanCollection, PostmanItem } from './types/postman.ts';
 
   interface Tab {
     id?: number;
@@ -14,32 +14,36 @@
   let tabs: Tab[] = []
   let activeTabId = 1
   let nextTabId = 2
-  let tabStates = new Map()
   let collections = [] // Initialize as empty array
-  import type { PostmanCollection, PostmanItem } from './types/postman.ts';
 
-  // Load saved state from localStorage
+  // Modified onMount to get tabs from collection
   onMount(() => {
     GetCollections()
       .then(response => {
         collections = Array.isArray(response) ? response : []
         console.log("Collections loaded:", collections)
+        
+        // Get collection from localStorage
+        const collection = localStorage.getItem("collection_1")
+        if (collection) {
+          const collObj = JSON.parse(collection)
+          // Create tabs from collection items
+          tabs = collObj.item.map((item, index) => ({
+            id: index,
+            title: item.name || `Request ${index + 1}`
+          }))
+          nextTabId = Math.max(...tabs.map(tab => tab.id ?? 0)) + 1
+          console.log("TABS" , tabs)
+        } else {
+          tabs = [{ id: 1, title: 'New Request 1' }]
+        }
+        activeTabId = tabs[0]?.id || 1
       })
       .catch(err => {
         console.error("Failed to load collections:", err)
-        collections = [] // Ensure it's an array even on error
+        collections = []
+        tabs = [{ id: 1, title: 'New Request 1' }]
       })
-
-    const savedTabs = localStorage.getItem('postman_tabs')
-    
-    if (savedTabs) {
-      tabs = JSON.parse(savedTabs)
-      nextTabId = Math.max(...tabs.map(tab => tab.id ?? 0)) + 1
-    } else {
-      tabs = [{ id: 1, title: 'New Request 1' }]
-    }
-
-    activeTabId = tabs[0]?.id || 1
   })
 
   function addNewTab() {
@@ -50,17 +54,21 @@
     tabs = [...tabs, newTab]
     activeTabId = nextTabId
     nextTabId++
-    saveTabs()
   }
 
   function removeTab(tabId: number | undefined) {
     tabs = tabs.filter(tab => tab.id !== tabId)
-    // Clean up the state when removing a tab
-    tabStates.delete(tabId)
     if (activeTabId === tabId && tabs.length > 0) {
       activeTabId = tabs[tabs.length - 1].id ?? 1
     }
-    saveTabs()
+
+    // Remove from collection in localStorage
+    const collection = localStorage.getItem("collection_1")
+    if (collection) {
+      const collObj = JSON.parse(collection)
+      collObj.item = collObj.item.filter(item => item.id !== tabId.toString())
+      localStorage.setItem('collection_1', JSON.stringify(collObj))
+    }
   }
 
   function saveTabState(state: PostmanItem) {
@@ -74,46 +82,37 @@
       const collectionToSave: PostmanCollection = {
         id: state.id,
         name: "API Testing Collection",
-        items: [state]
+        item: [state]  // Changed from items to item
       }
   
       localStorage.setItem('collection_1', JSON.stringify(collectionToSave))
       return
     } else {
       const collObj = JSON.parse(collection)
-      const itemIndex = collObj.items.findIndex((item: PostmanItem) => item.id === state.id)
+      const itemIndex = collObj.item.findIndex((item: PostmanItem) => item.id === state.id)  // Changed from items to item
       if (itemIndex === -1) {
-        collObj.items.push(state)
+        collObj.item.push(state)  // Changed from items to item
       } else {
-        collObj.items[itemIndex] = state
+        collObj.item[itemIndex] = state  // Changed from items to item
       }
 
       localStorage.setItem('collection_1', JSON.stringify(collObj))
     }
-
-
-
   }
 
   function getTabState(id: number) {
     const collection = localStorage.getItem("collection_1")
-    console.log(collection)
     const collObj = collection ? JSON.parse(collection) : null
+    console.log(collObj)
 
     if (!collObj) {
       return null
     }
     
-    const resp = collObj.items.find((item: PostmanItem) => item.id === id.toString()) || null
+    const resp = collObj.item.find((item: PostmanItem) => item.id === id.toString()) || null  // Changed from items to item
     console.log("GET TAB STATE CALLED", resp)
     return resp;
   }
-
-  // Helper functions to save to localStorage
-  function saveTabs() {
-    localStorage.setItem('postman_tabs', JSON.stringify(tabs))
-  }
-
 
   let isSidebarOpen = true;
   let showNewCollectionModal = false;
@@ -142,6 +141,35 @@
     { method: 'PUT', url: 'https://api.example.com/products/1', timestamp: '1 hour ago' },
     { method: 'DELETE', url: 'https://api.example.com/posts/5', timestamp: '2 hours ago' }
   ];
+
+  // Add new function to handle file import
+  async function handleFileImport(event: Event) {
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const collection = JSON.parse(text);
+
+      // Basic validation that it's a Postman collection
+      if (!collection.info || !collection.item) {
+        throw new Error('Invalid Postman collection format');
+      }
+
+      // Store in localStorage
+      localStorage.setItem('collection_1', text);
+
+      
+      // Reset file input
+      target.value = '';
+      
+      alert('Collection imported successfully!');
+    } catch (error) {
+      console.error('Error importing collection:', error);
+      alert('Failed to import collection. Please make sure it\'s a valid Postman collection file.');
+    }
+  }
 </script>
 
 <main class="min-h-screen bg-gray-900 text-gray-100 text-sm flex">
@@ -150,6 +178,20 @@
     <div class="p-4">
       <img src={logo} alt="Logo" class="h-8 w-auto mb-6">
       
+      <!-- Add Import Button above New Collection -->
+      <label class="w-full mb-4 px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg text-white flex items-center justify-center cursor-pointer">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+        </svg>
+        Import Collection
+        <input 
+          type="file" 
+          accept=".json"
+          class="hidden" 
+          on:change={handleFileImport}
+        >
+      </label>
+
       <!-- Add New Collection Button -->
       <button
         class="w-full mb-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white flex items-center justify-center"
