@@ -545,10 +545,11 @@
                             file:hover:bg-gray-500
                             focus-within:outline-none focus-within:ring-2 focus-within:ring-blue-500
                             cursor-pointer"
-                          on:change={(e) => {
-                            formItem.src = e.target.files?.[0]?.name || '';
+                          on:change={(e: Event) => {
+                            const target = e.target as HTMLInputElement;
+                            formItem.src = target.files?.[0]?.name || '';
                             // Store the file object temporarily for upload
-                            formItem.value = e.target.files?.[0];
+                            formItem.value = target.files?.[0];
                           }}
                         >
                       {/if}
