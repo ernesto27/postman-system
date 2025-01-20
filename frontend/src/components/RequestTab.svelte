@@ -4,7 +4,7 @@
   import type { PostmanCollection, PostmanRequest, PostmanItem } from '../types/postman.ts';
 
 
-  const exampleCollection: PostmanCollection = {
+  const defaultCollection: PostmanCollection = {
     id: "1",
     name: "API Testing Collection",
     items: [
@@ -21,71 +21,39 @@
             port: "8080",
             query: [
               {
-                key: "page",
-                value: "1",
+                key: "",
+                value: "",
                 disabled: false
               }
             ]
           },
           header: [
             {
-              key: "Accept",
-              value: "application/json",
-              disabled: false
-            }
-          ]
-        },
-        response: []
-      },
-      {
-        id: "req2",
-        name: "Create User",
-        request: {
-          method: "POST",
-          url: {
-            raw: "https://api.example.com/users",
-            protocol: "https",
-            host: ["api", "example", "com"],
-            path: ["users"],
-            port: "8080",
-          },
-          header: [
-            {
-              key: "Content-Type",
-              value: "application/json",
+              key: "",
+              value: "",
               disabled: false
             },
-            {
-              key: "Authorization",
-              value: "Bearer token123",
-              disabled: false
-            }
           ],
           body: {
             mode: "raw",
-            raw: JSON.stringify({
-              name: "John Doe",
-              email: "john@example.com"
-            }),
-            options: {
-              raw: {
-                language: "json"
-              }
-            }
-          }
+            raw: "",
+            formdata: [{
+              key: "",
+              value: "",
+              type: "text"
+            }]
+          },
         },
         response: []
-      }
+      },
     ],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
 
-  console.log(exampleCollection)
 
 
-
-  export let title: string = 'New Request'
+  export let tabID: string
   export let savedState: PostmanItem | null = null
   export let onStateChange = (state) => {
     console.log(state)
@@ -103,7 +71,7 @@
 
 
   let item: PostmanItem | null = {
-    id: "req123",
+    id: "default",
     name: "Create New User",
     request: {
       method: "POST",
@@ -248,22 +216,37 @@
 
   // Update onMount to handle PostmanRequest
   onMount(() => {
-    // if (item) {
-    //   request = item.request
-    //   title = item.name
-    // } else if (savedState) {
-    //   // Convert savedState to PostmanRequest format
-    //   request = savedState.request
-    // }
-
-    console.log("REQUEST TAB ON MOUNT STATE ", savedState)
-
-    item = savedState
-    console.log("REQUEST TAB ON MOUNT ITEM", item) 
+    console.log('REQUEST TAB ON MOUNT CALLED')
+    if (savedState) {
+      console.log("SAVED STATE FOUND")
+      item = savedState
+    } else {
+      console.log("NO SAVED STATE")
+      item = defaultCollection.items[0]
+    }
     
   })
 
+  function handleTabKey(event: KeyboardEvent) {
+    if (event.key === 'Tab') {
+      event.preventDefault();
+      const target = event.target as HTMLTextAreaElement;
+      const start = target.selectionStart;
+      const end = target.selectionEnd;
+      
+      const value = target.value;
+      target.value = value.substring(0, start) + '\t' + value.substring(end);
+      
+      target.selectionStart = target.selectionEnd = start + 1;
+    }
+  }
+
   async function handleSend() {
+    if (item) {
+      item.id = tabID
+    }
+
+
     isLoading = true
     responseData = ''
     responseStatus = ''
@@ -512,22 +495,21 @@
               </label>
             </div>
 
-            {#if request.body.mode === 'raw'}
+            {#if item.request.body.mode === 'raw'}
               <textarea
                 bind:value={item.request.body.raw}
                 placeholder="Enter request body (JSON, text, etc.)"
                 on:keydown={handleTabKey}
                 class="w-full h-40 bg-gray-700 text-gray-300 px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
               ></textarea>
-            {:else if request.body.mode === 'formdata'}
+            {:else if item.request.body.mode === 'formdata'}
               <div class="space-y-4">
-                {#each request.body.formdata as field, i}
+                {#each item.request.body.formdata || [] as formItem, i}
                   <div class="grid grid-cols-1 md:grid-cols-[2fr_2fr_3fr] gap-4 items-end">
-                    <!-- Form data fields -->
                     <div>
                       <label class="block text-xs text-gray-400 mb-1">Key</label>
                       <input 
-                        bind:value={field.key}
+                        bind:value={formItem.key}
                         type="text"
                         on:focus={() => handleFormDataKeyFocus(i)}
                         class="w-full bg-gray-700 text-gray-300 px-3 py-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
@@ -536,7 +518,7 @@
                     <div>
                       <label class="block text-xs text-gray-400 mb-1">Type</label>
                       <select
-                        bind:value={field.type}
+                        bind:value={formItem.type}
                         class="w-full bg-gray-800 text-white font-medium px-3 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border border-gray-700 appearance-none cursor-pointer [&>option]:bg-gray-800 [&>option]:text-white text-sm"
                         style="background-image: url('data:image/svg+xml;utf8,<svg fill=white xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><path d=%22M7 10l5 5 5-5z%22/></svg>'); background-repeat: no-repeat; background-position: right 8px center; padding-right: 32px;"
                       >
@@ -546,9 +528,9 @@
                     </div>
                     <div>
                       <label class="block text-xs text-gray-400 mb-1">Value</label>
-                      {#if field.type === 'text'}
+                      {#if formItem.type === 'text'}
                         <input 
-                          bind:value={field.value}
+                          bind:value={formItem.value}
                           type="text" 
                           class="w-full bg-gray-700 text-gray-300 px-3 py-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                         >
@@ -563,7 +545,11 @@
                             file:hover:bg-gray-500
                             focus-within:outline-none focus-within:ring-2 focus-within:ring-blue-500
                             cursor-pointer"
-                          on:change={(e) => field.value = e.target.files[0]}
+                          on:change={(e) => {
+                            formItem.src = e.target.files?.[0]?.name || '';
+                            // Store the file object temporarily for upload
+                            formItem.value = e.target.files?.[0];
+                          }}
                         >
                       {/if}
                     </div>

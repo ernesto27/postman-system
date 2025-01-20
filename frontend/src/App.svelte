@@ -31,17 +31,12 @@
       })
 
     const savedTabs = localStorage.getItem('postman_tabs')
-    const savedStates = localStorage.getItem('postman_states')
     
     if (savedTabs) {
       tabs = JSON.parse(savedTabs)
       nextTabId = Math.max(...tabs.map(tab => tab.id ?? 0)) + 1
     } else {
       tabs = [{ id: 1, title: 'New Request 1' }]
-    }
-
-    if (savedStates) {
-      tabStates = new Map(JSON.parse(savedStates))
     }
 
     activeTabId = tabs[0]?.id || 1
@@ -58,7 +53,7 @@
     saveTabs()
   }
 
-  function removeTab(tabId: number) {
+  function removeTab(tabId: number | undefined) {
     tabs = tabs.filter(tab => tab.id !== tabId)
     // Clean up the state when removing a tab
     tabStates.delete(tabId)
@@ -69,30 +64,49 @@
   }
 
   function saveTabState(state: PostmanItem) {
-    const collectionToSave: PostmanCollection = {
-      id: "1",
-      name: "API Testing Collection",
-      items: [state]
+    console.log("SAVED STATE CALLED", state)
+    if (state.id === "default") {
+      return
     }
 
-    // collectionToSave.items.push(state)
+    const collection = localStorage.getItem("collection_1")
+    if (!collection) {
+      const collectionToSave: PostmanCollection = {
+        id: state.id,
+        name: "API Testing Collection",
+        items: [state]
+      }
+  
+      localStorage.setItem('collection_1', JSON.stringify(collectionToSave))
+      return
+    } else {
+      const collObj = JSON.parse(collection)
+      const itemIndex = collObj.items.findIndex((item: PostmanItem) => item.id === state.id)
+      if (itemIndex === -1) {
+        collObj.items.push(state)
+      } else {
+        collObj.items[itemIndex] = state
+      }
 
-    localStorage.setItem('collection_1', JSON.stringify(collectionToSave))
+      localStorage.setItem('collection_1', JSON.stringify(collObj))
+    }
 
-    console.log("SAVED STATE", state)
 
 
-    // tabStates.set(tabId, state)
-    // saveStates()
   }
 
-  function getTabState() {
+  function getTabState(id: number) {
     const collection = localStorage.getItem("collection_1")
     console.log(collection)
     const collObj = collection ? JSON.parse(collection) : null
-    console.log(collObj.items[0])
-    return collObj?.items[0]
-    // return tabStates.get(tabId)
+
+    if (!collObj) {
+      return null
+    }
+    
+    const resp = collObj.items.find((item: PostmanItem) => item.id === id.toString()) || null
+    console.log("GET TAB STATE CALLED", resp)
+    return resp;
   }
 
   // Helper functions to save to localStorage
@@ -100,9 +114,6 @@
     localStorage.setItem('postman_tabs', JSON.stringify(tabs))
   }
 
-  function saveStates() {
-    localStorage.setItem('postman_states', JSON.stringify([...tabStates]))
-  }
 
   let isSidebarOpen = true;
   let showNewCollectionModal = false;
@@ -231,7 +242,7 @@
           <div class="flex items-center">
             <button
               class="px-4 py-2 rounded-t-lg {activeTabId === tab.id ? 'bg-gray-800 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}"
-              on:click={() => activeTabId = tab.id}
+              on:click={() => activeTabId = tab.id ?? 1}
             >
               {tab.title}
             </button>
@@ -257,8 +268,8 @@
       {#each tabs as tab}
         {#if activeTabId === tab.id}
           <RequestTab 
-            title={tab.title}
-            savedState={getTabState()}
+            tabID={tab.id.toString()}
+            savedState={getTabState(tab.id)}
             onStateChange={(state) => saveTabState(state)}
           />
         {/if}
