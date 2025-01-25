@@ -7,14 +7,24 @@
   import type { PostmanCollection, PostmanItem } from './types/postman.ts';
 
   interface Tab {
-    id?: number;
-    title?: string;
+    id: string;
+    request: PostmanItem;
+    title: string;
   }
 
-  let tabs: Tab[] = []
-  let activeTabId = 1
-  let nextTabId = 2
+  let tabs: Tab[] = [];
+  let activeTabId: string | null = null;
+  let selectedRequest: PostmanItem | null = null;
   let collections = [] // Initialize as empty array
+  let importedCollection: PostmanCollection | null = null
+
+  // Add state for expanded collections
+  let expandedCollections: Record<string, boolean> = {};
+
+  // Toggle collection expansion
+  function toggleCollection(collectionId: string) {
+    expandedCollections[collectionId] = !expandedCollections[collectionId];
+  }
 
   // Modified onMount to get tabs from collection
   onMount(() => {
@@ -28,46 +38,52 @@
         if (collection) {
           const collObj = JSON.parse(collection)
           // Create tabs from collection items
-          tabs = collObj.item.map((item, index) => ({
-            id: index,
-            title: item.name || `Request ${index + 1}`
-          }))
-          nextTabId = Math.max(...tabs.map(tab => tab.id ?? 0)) + 1
-          console.log("TABS" , tabs)
-        } else {
-          tabs = [{ id: 1, title: 'New Request 1' }]
+          console.log("TABS" , collObj.item)
         }
-        activeTabId = tabs[0]?.id || 1
       })
       .catch(err => {
         console.error("Failed to load collections:", err)
         collections = []
-        tabs = [{ id: 1, title: 'New Request 1' }]
       })
+
+    // Load imported collection from localStorage
+    const savedCollection = localStorage.getItem("collection_1")
+    if (savedCollection) {
+      importedCollection = JSON.parse(savedCollection)
+    }
   })
 
-  function addNewTab() {
+  // Function to handle request item click
+  function handleRequestClick(request: PostmanItem) {
+    // Always open a new tab for any request clicked
     const newTab = {
-      id: nextTabId,
-      title: `New Request ${nextTabId}`
-    }
-    tabs = [...tabs, newTab]
-    activeTabId = nextTabId
-    nextTabId++
+      id: `${request.id}-${Date.now()}`,
+      request: request,
+      title: request.name
+    };
+    tabs = [...tabs, newTab];
+    activeTabId = newTab.id;
+    selectedRequest = request;
   }
 
-  function removeTab(tabId: number | undefined) {
-    tabs = tabs.filter(tab => tab.id !== tabId)
-    if (activeTabId === tabId && tabs.length > 0) {
-      activeTabId = tabs[tabs.length - 1].id ?? 1
-    }
-
-    // Remove from collection in localStorage
-    const collection = localStorage.getItem("collection_1")
-    if (collection) {
-      const collObj = JSON.parse(collection)
-      collObj.item = collObj.item.filter(item => item.id !== tabId.toString())
-      localStorage.setItem('collection_1', JSON.stringify(collObj))
+  function closeTab(tabId: string, event: MouseEvent) {
+    event.stopPropagation();
+    const index = tabs.findIndex(tab => tab.id === tabId);
+    const currentTabs = tabs.filter(tab => tab.id !== tabId);
+    
+    tabs = currentTabs;
+    
+    // If we're closing the active tab
+    if (activeTabId === tabId) {
+      if (currentTabs.length > 0) {
+        // Try to activate the tab at the same index, or the last tab
+        const newActiveIndex = Math.min(index, currentTabs.length - 1);
+        activeTabId = currentTabs[newActiveIndex].id;
+        selectedRequest = currentTabs[newActiveIndex].request;
+      } else {
+        activeTabId = null;
+        selectedRequest = null;
+      }
     }
   }
 
@@ -98,20 +114,6 @@
 
       localStorage.setItem('collection_1', JSON.stringify(collObj))
     }
-  }
-
-  function getTabState(id: number) {
-    const collection = localStorage.getItem("collection_1")
-    const collObj = collection ? JSON.parse(collection) : null
-    console.log(collObj)
-
-    if (!collObj) {
-      return null
-    }
-    
-    const resp = collObj.item.find((item: PostmanItem) => item.id === id.toString()) || null  // Changed from items to item
-    console.log("GET TAB STATE CALLED", resp)
-    return resp;
   }
 
   let isSidebarOpen = true;
@@ -159,8 +161,6 @@
 
       // Store in localStorage
       localStorage.setItem('collection_1', text);
-
-      
       // Reset file input
       target.value = '';
       
@@ -169,6 +169,14 @@
       console.error('Error importing collection:', error);
       alert('Failed to import collection. Please make sure it\'s a valid Postman collection file.');
     }
+  }
+
+  // Helper function to get method color
+  function getMethodColor(method: string) {
+    return method === 'GET' ? 'text-blue-400' : 
+           method === 'POST' ? 'text-green-400' : 
+           method === 'PUT' ? 'text-yellow-400' : 
+           method === 'DELETE' ? 'text-red-400' : 'text-gray-400'
   }
 </script>
 
@@ -241,15 +249,56 @@
         </div>
       {/if}
 
-      <!-- Dynamic Collection List -->
+      <!-- Replace Dynamic Collection List with Imported Collection Items -->
       <div class="space-y-4">
+        {#if importedCollection}
+          <div class="space-y-2">
+            <!-- svelte-ignore a11y-click-events-have-key-events -->
+            <div 
+              class="flex items-center justify-between p-2 hover:bg-gray-700 rounded-lg cursor-pointer"
+              on:click={() => importedCollection && toggleCollection(importedCollection.info._postman_id)}
+            >
+              <div class="flex items-center">
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  class="h-4 w-4 mr-2 transform transition-transform {expandedCollections[importedCollection.info._postman_id] ? 'rotate-90' : ''}" 
+                  viewBox="0 0 20 20" 
+                  fill="currentColor"
+                >
+                  <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+                <span class="text-gray-300 font-medium">{importedCollection.info.name}</span>
+              </div>
+              <span class="text-xs text-gray-500">{importedCollection.item?.length || 0} requests</span>
+            </div>
+            
+            {#if expandedCollections[importedCollection.info._postman_id]}
+              <div class="pl-4 space-y-1 transition-all">
+                {#each importedCollection.item || [] as request}
+                  <!-- svelte-ignore a11y-click-events-have-key-events -->
+                  <div 
+                    class="w-full text-left px-2 py-1 rounded hover:bg-gray-700 flex items-center group cursor-pointer {selectedRequest?.id === request.id ? 'bg-gray-700' : ''}"
+                    on:click={() => handleRequestClick(request)}
+                  >
+                    <span class="text-xs font-medium {getMethodColor(request.request.method)} w-12 flex-shrink-0">{request.request.method}</span>
+                    <span class="text-gray-400 text-sm truncate flex-1 min-w-0">{request.name}</span>
+                  </div>
+                {/each}
+              </div>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- Comment out original collections section -->
+      <!-- <div class="space-y-4">
         {#each collections as collection}
           <div class="space-y-2">
             <div class="flex items-center">
               <span class="text-gray-300 font-medium">{collection.name}</span>
             </div>
             <div class="pl-4 space-y-1">
-              <!-- {#each collection.requests as request}
+              {#each collection.requests as request}
                 <div class="w-full text-left px-2 py-1 rounded hover:bg-gray-700 flex items-center">
                   <span class="text-xs font-medium {request.method === 'GET' ? 'text-blue-400' : 
                     request.method === 'POST' ? 'text-green-400' : 
@@ -257,11 +306,11 @@
                     request.method === 'DELETE' ? 'text-red-400' : 'text-gray-400'} w-12">{request.method}</span>
                   <span class="text-gray-400 text-sm truncate">{request.name}</span>
                 </div>
-              {/each} -->
+              {/each}
             </div>
           </div>
         {/each}
-      </div>
+      </div> -->
     </div>
   </div>
 
@@ -279,43 +328,82 @@
       </button>
 
       <!-- Tabs Bar -->
-      <div class="flex items-center gap-2 mb-4 overflow-x-auto">
-        {#each tabs as tab}
-          <div class="flex items-center">
-            <button
-              class="px-4 py-2 rounded-t-lg {activeTabId === tab.id ? 'bg-gray-800 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}"
-              on:click={() => activeTabId = tab.id ?? 1}
+      {#if tabs.length > 0}
+        <div class="flex items-center gap-1 mb-4 overflow-x-auto border-b border-gray-700">
+          {#each tabs as tab}
+            <!-- svelte-ignore a11y-click-events-have-key-events -->
+            <div 
+              class="flex-shrink-0 flex items-center group cursor-pointer {activeTabId === tab.id ? 'border-b-2 border-blue-500' : ''}"
+              on:click={() => {
+                activeTabId = tab.id;
+                selectedRequest = tab.request;
+              }}
             >
-              {tab.title}
-            </button>
-            {#if tabs.length > 1}
-              <button
-                class="ml-2 text-gray-500 hover:text-gray-300"
-                on:click={() => removeTab(tab.id)}
-              >
-                ×
-              </button>
-            {/if}
-          </div>
-        {/each}
-        <button
-          class="px-3 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-300"
-          on:click={addNewTab}
-        >
-          +
-        </button>
-      </div>
+              <div class="px-3 py-2 flex items-center gap-2 hover:bg-gray-800 rounded-t">
+                <span class="text-xs font-medium {getMethodColor(tab.request.request.method)} flex-shrink-0">{tab.request.request.method}</span>
+                <span class="text-sm text-gray-300 truncate max-w-[150px]">{tab.title}</span>
+                <button
+                  class="ml-2 p-1 rounded-full hover:bg-gray-700 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                  on:click={(e) => closeTab(tab.id, e)}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          {/each}
+        </div>
 
-      <!-- Active Tab Content -->
-      {#each tabs as tab}
-        {#if activeTabId === tab.id}
-          <RequestTab 
-            tabID={tab.id.toString()}
-            savedState={getTabState(tab.id)}
-            onStateChange={(state) => saveTabState(state)}
-          />
+        <!-- Active Tab Content -->
+        {#if activeTabId}
+          {#each tabs as tab}
+            {#if activeTabId === tab.id}
+              <RequestTab 
+                tabID={tab.request.id}
+                savedState={tab.request}
+                onStateChange={saveTabState}
+              />
+            {/if}
+          {/each}
         {/if}
-      {/each}
+      {:else}
+        <!-- Show empty state when no tabs are open -->
+        <div class="flex items-center justify-center h-[calc(100vh-200px)]">
+          <div class="text-center max-w-md">
+            <div class="bg-gray-800 p-8 rounded-lg shadow-lg">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              <h3 class="text-xl font-medium text-gray-100 mb-2">No Request Selected</h3>
+              <p class="text-gray-400 mb-6">Select a request from the sidebar to start testing your API endpoints.</p>
+              <div class="flex justify-center gap-4">
+                <button 
+                  class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm text-white flex items-center gap-2"
+                  on:click={() => showNewCollectionModal = true}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                  </svg>
+                  New Collection
+                </button>
+                <label class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm text-white flex items-center gap-2 cursor-pointer">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                  </svg>
+                  Import Collection
+                  <input 
+                    type="file" 
+                    accept=".json"
+                    class="hidden" 
+                    on:change={handleFileImport}
+                  >
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      {/if}
     </div>
   </div>
 </main>
@@ -348,4 +436,23 @@
 
 <style>
   /* Add any additional styles here */
+  :global(.tab-container) {
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.gray.600') theme('colors.gray.800');
+  }
+  
+  :global(.tab-container::-webkit-scrollbar) {
+    height: 6px;
+  }
+  
+  :global(.tab-container::-webkit-scrollbar-track) {
+    background: theme('colors.gray.800');
+  }
+  
+  :global(.tab-container::-webkit-scrollbar-thumb) {
+    background-color: theme('colors.gray.600');
+    border-radius: 3px;
+  }
 </style>

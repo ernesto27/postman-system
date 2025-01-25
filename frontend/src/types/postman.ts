@@ -65,6 +65,13 @@ export interface PostmanItem {
 export interface PostmanCollection {
   id: string;
   name: string;
+  info: {
+    _postman_id: string;
+    name: string;
+    schema: string;
+    _exporter_id: string;
+    _collection_link: string;
+  };
   item: PostmanItem[];
   createdAt?: string;
   updatedAt?: string;

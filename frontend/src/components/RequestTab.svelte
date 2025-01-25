@@ -5,50 +5,57 @@
 
 
   const defaultCollection: PostmanCollection = {
-    id: "1",
-    name: "API Testing Collection",
-    items: [
-      {
-        id: "req1",
-        name: "Get Users",
-        request: {
-          method: "GET",
-          url: {
-            raw: "https://api.example.com/users",
-            protocol: "https",
-            host: ["api", "example", "com"],
-            path: ["users"],
-            port: "8080",
-            query: [
-              {
-                key: "",
-                value: "",
-                disabled: false
-              }
-            ]
+      id: "1",
+      name: "API Testing Collection",
+      item: [
+          {
+              id: "req1",
+              name: "Get Users",
+              request: {
+                  method: "GET",
+                  url: {
+                      raw: "https://api.example.com/users",
+                      protocol: "https",
+                      host: ["api", "example", "com"],
+                      path: ["users"],
+                      port: "8080",
+                      query: [
+                          {
+                              key: "",
+                              value: "",
+                              disabled: false
+                          }
+                      ]
+                  },
+                  header: [
+                      {
+                          key: "",
+                          value: "",
+                          disabled: false
+                      },
+                  ],
+                  body: {
+                      mode: "raw",
+                      raw: "",
+                      formdata: [{
+                          key: "",
+                          value: "",
+                          type: "text"
+                      }]
+                  },
+              },
+              response: []
           },
-          header: [
-            {
-              key: "",
-              value: "",
-              disabled: false
-            },
-          ],
-          body: {
-            mode: "raw",
-            raw: "",
-            formdata: [{
-              key: "",
-              value: "",
-              type: "text"
-            }]
-          },
-        },
-        response: []
-      },
-    ],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+      ],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      info: {
+          _postman_id: '',
+          name: '',
+          schema: '',
+          _exporter_id: '',
+          _collection_link: ''
+      }
   };
 
 
@@ -144,8 +151,10 @@
 
   function addQueryParam() {
     if (!item) return;
-    if (!item.request.url.query) item.request.url.query = []
-    item.request.url.query = [...item.request.url.query, { key: '', value: '', disabled: false }]
+    if (!item.request.url.query) {
+      item.request.url.query = [];
+    }
+    item.request.url.query = [...item.request.url.query, { key: '', value: '', disabled: false }];
   }
 
   function addFormDataField() {
@@ -179,17 +188,23 @@
 
   // Update URL change handler
   function handleParamChange() {
-    const newUrl = buildUrl()
     if (!item) return;
+    
+    // Initialize query array if it doesn't exist
+    if (!item.request.url.query) {
+      item.request.url.query = [{ key: '', value: '', disabled: false }];
+    }
+    
+    const newUrl = buildUrl();
     if (newUrl !== item.request.url.raw) {
-      item.request.url.raw = newUrl
+      item.request.url.raw = newUrl;
     }
     
     // Ensure there's always an empty row at the end
-    const query = item.request.url.query || []
-    const lastParam = query[query.length - 1]
+    const query = item.request.url.query;
+    const lastParam = query[query.length - 1];
     if (lastParam && (lastParam.key || lastParam.value)) {
-      addQueryParam()
+      addQueryParam();
     }
   }
 
@@ -222,7 +237,7 @@
       item = savedState
     } else {
       console.log("NO SAVED STATE")
-      item = defaultCollection.items[0]
+      item = defaultCollection.item[0]
     }
     
   })
@@ -400,7 +415,7 @@
       <div class="bg-gray-900 rounded-lg p-4">
         {#if activeTab === 'params'}
           <div class="space-y-4 max-h-[200px] overflow-y-auto pr-2 pb-2">
-            {#each item.request.url.query || [] as param, i}
+            {#each item.request.url.query || [{ key: '', value: '', disabled: false }] as param, i}
               <div class="grid grid-cols-1 md:grid-cols-[24px_2fr_2fr] gap-4 items-end">
                 <div class="flex items-end">
                   <div class="h-[24px] flex items-center">
@@ -413,6 +428,7 @@
                   </div>
                 </div>
                 <div>
+                  <!-- svelte-ignore a11y-label-has-associated-control -->
                   <label class="block text-xs text-gray-400 mb-0.5">Key</label>
                   <input 
                     bind:value={param.key}
@@ -424,6 +440,7 @@
                   >
                 </div>
                 <div>
+                  <!-- svelte-ignore a11y-label-has-associated-control -->
                   <label class="block text-xs text-gray-400 mb-0.5">Value</label>
                   <input 
                     bind:value={param.value}
