@@ -10,6 +10,7 @@
     id: string;
     request: PostmanItem;
     title: string;
+    hasChanges: boolean; 
   }
 
   let tabs: Tab[] = [];
@@ -17,6 +18,7 @@
   let selectedRequest: PostmanItem | null = null;
   let collections = [] // Initialize as empty array
   let importedCollection: PostmanCollection | null = null
+  let currentItem: PostmanItem
 
   // Add state for expanded collections
   let expandedCollections: Record<string, boolean> = {};
@@ -26,40 +28,103 @@
     expandedCollections[collectionId] = !expandedCollections[collectionId];
   }
 
+  function handleKeyDown(event: KeyboardEvent) {
+    if (event.ctrlKey && event.key === 's' && activeTabId !== null) {
+      event.preventDefault();
+
+      console.log('Saving changes...');
+      
+      const collection = localStorage.getItem("collection_1")
+      if (!collection) {
+        const collectionToSave: PostmanCollection = {
+            id: "1",
+            name: "API Testing Collection",
+            item: [currentItem],
+            info: {
+                _postman_id: '',
+                name: '',
+                schema: '',
+                _exporter_id: '',
+                _collection_link: ''
+            }
+        }
+
+        localStorage.setItem('collection_1', JSON.stringify(collectionToSave))
+        return
+      } else {
+        const collObj = JSON.parse(collection)
+        const itemIndex = collObj.item.findIndex((item: PostmanItem) => item.id === currentItem.id)
+        if (itemIndex === -1) {
+          collObj.item.push(currentItem)
+        } else {
+          collObj.item[itemIndex] = currentItem
+        }
+        localStorage.setItem('collection_1', JSON.stringify(collObj))
+      }
+
+      tabs = tabs.map(tab => {
+      if (tab.title === currentItem.name) {
+        let updatedTab = { ...tab, hasChanges: false };
+        console.log("Updated tab:", updatedTab);
+        return updatedTab;
+      }
+      return tab;
+    });
+    }
+  }
+
   // Modified onMount to get tabs from collection
   onMount(() => {
-    GetCollections()
-      .then(response => {
-        collections = Array.isArray(response) ? response : []
-        console.log("Collections loaded:", collections)
+    // Add event listener
+    window.addEventListener('keydown', handleKeyDown);
+
+
+    // Get collection from localStorage
+    // const collection = localStorage.getItem("collection_1")
+    // if (collection) {
+    //   const collObj = JSON.parse(collection)
+    //   // Create tabs from collection items
+    //   console.log("TABS" , collObj.item)
+    // }
+
+    // GetCollections()
+    //   .then(response => {
+    //     collections = Array.isArray(response) ? response : []
+    //     console.log("Collections loaded:", collections)
         
-        // Get collection from localStorage
-        const collection = localStorage.getItem("collection_1")
-        if (collection) {
-          const collObj = JSON.parse(collection)
-          // Create tabs from collection items
-          console.log("TABS" , collObj.item)
-        }
-      })
-      .catch(err => {
-        console.error("Failed to load collections:", err)
-        collections = []
-      })
+    //     // Get collection from localStorage
+    //     const collection = localStorage.getItem("collection_1")
+    //     if (collection) {
+    //       const collObj = JSON.parse(collection)
+    //       // Create tabs from collection items
+    //       console.log("TABS" , collObj.item)
+    //     }
+    //   })
+    //   .catch(err => {
+    //     console.error("Failed to load collections:", err)
+    //     collections = []
+    //   })
 
     // Load imported collection from localStorage
     const savedCollection = localStorage.getItem("collection_1")
     if (savedCollection) {
       importedCollection = JSON.parse(savedCollection)
     }
+
+    // Clean up event listener
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   })
 
   // Function to handle request item click
   function handleRequestClick(request: PostmanItem) {
     // Always open a new tab for any request clicked
     const newTab = {
-      id: `${request.id}-${Date.now()}`,
+      id: Date.now(),
       request: request,
-      title: request.name
+      title: request.name,
+      hasChanges: false
     };
     tabs = [...tabs, newTab];
     activeTabId = newTab.id;
@@ -87,33 +152,27 @@
     }
   }
 
-  function saveTabState(state: PostmanItem) {
+  function onStateChange(state: PostmanItem) {
     console.log("SAVED STATE CALLED", state)
     if (state.id === "default") {
       return
     }
 
-    const collection = localStorage.getItem("collection_1")
-    if (!collection) {
-      const collectionToSave: PostmanCollection = {
-        id: state.id,
-        name: "API Testing Collection",
-        item: [state]  // Changed from items to item
+    // Update tabs properly with reactivity
+    tabs = tabs.map(tab => {
+      if (tab.title === state.name) {
+        let updatedTab = { ...tab, hasChanges: true };
+        console.log("Updated tab:", updatedTab);
+        return updatedTab;
       }
-  
-      localStorage.setItem('collection_1', JSON.stringify(collectionToSave))
-      return
-    } else {
-      const collObj = JSON.parse(collection)
-      const itemIndex = collObj.item.findIndex((item: PostmanItem) => item.id === state.id)  // Changed from items to item
-      if (itemIndex === -1) {
-        collObj.item.push(state)  // Changed from items to item
-      } else {
-        collObj.item[itemIndex] = state  // Changed from items to item
-      }
+      return tab;
+    });
 
-      localStorage.setItem('collection_1', JSON.stringify(collObj))
-    }
+    console.log('TABS ', tabs)
+    currentItem = state
+    return
+
+    
   }
 
   let isSidebarOpen = true;
@@ -180,7 +239,7 @@
   }
 </script>
 
-<main class="min-h-screen bg-gray-900 text-gray-100 text-sm flex">
+<main class="min-h-screen bg-gray-900 text-gray-100 text-sm flex" on:keydown={handleKeyDown}>
   <!-- Sidebar -->
   <div class="w-64 bg-gray-800 border-r border-gray-700 flex-shrink-0">
     <div class="p-4">
@@ -189,7 +248,7 @@
       <!-- Add Import Button above New Collection -->
       <label class="w-full mb-4 px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg text-white flex items-center justify-center cursor-pointer">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+          <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a 1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
         </svg>
         Import Collection
         <input 
@@ -341,7 +400,12 @@
             >
               <div class="px-3 py-2 flex items-center gap-2 hover:bg-gray-800 rounded-t">
                 <span class="text-xs font-medium {getMethodColor(tab.request.request.method)} flex-shrink-0">{tab.request.request.method}</span>
-                <span class="text-sm text-gray-300 truncate max-w-[150px]">{tab.title}</span>
+                <div class="flex items-center gap-2">
+                  <span class="text-sm text-gray-300 truncate max-w-[150px]">{tab.title}</span>
+                  {#if tab.hasChanges}
+                    <div class="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
+                  {/if}
+                </div>
                 <button
                   class="ml-2 p-1 rounded-full hover:bg-gray-700 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                   on:click={(e) => closeTab(tab.id, e)}
@@ -362,7 +426,7 @@
               <RequestTab 
                 tabID={tab.request.id}
                 savedState={tab.request}
-                onStateChange={saveTabState}
+                onStateChange={onStateChange}
               />
             {/if}
           {/each}
@@ -407,8 +471,6 @@
     </div>
   </div>
 </main>
-
-<!-- New Collection Modal -->
 <Modal show={showNewCollectionModal} title="Create New Collection">
   <div class="space-y-4">
     <input

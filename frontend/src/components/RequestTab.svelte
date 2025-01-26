@@ -4,62 +4,6 @@
   import type { PostmanCollection, PostmanRequest, PostmanItem } from '../types/postman.ts';
 
 
-  const defaultCollection: PostmanCollection = {
-      id: "1",
-      name: "API Testing Collection",
-      item: [
-          {
-              id: "req1",
-              name: "Get Users",
-              request: {
-                  method: "GET",
-                  url: {
-                      raw: "https://api.example.com/users",
-                      protocol: "https",
-                      host: ["api", "example", "com"],
-                      path: ["users"],
-                      port: "8080",
-                      query: [
-                          {
-                              key: "",
-                              value: "",
-                              disabled: false
-                          }
-                      ]
-                  },
-                  header: [
-                      {
-                          key: "",
-                          value: "",
-                          disabled: false
-                      },
-                  ],
-                  body: {
-                      mode: "raw",
-                      raw: "",
-                      formdata: [{
-                          key: "",
-                          value: "",
-                          type: "text"
-                      }]
-                  },
-              },
-              response: []
-          },
-      ],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      info: {
-          _postman_id: '',
-          name: '',
-          schema: '',
-          _exporter_id: '',
-          _collection_link: ''
-      }
-  };
-
-
-
   export let tabID: string
   export let savedState: PostmanItem | null = null
   export let onStateChange = (state) => {
@@ -141,7 +85,7 @@
       responseTime,
       responseSize
     }
-    onStateChange(state)
+    onStateChange(item)
   }
 
   function addHeader() {
@@ -235,11 +179,49 @@
     if (savedState) {
       console.log("SAVED STATE FOUND")
       item = savedState
+      // Initialize body if it doesn't exist
+      if (!item.request.body) {
+        item.request.body = {
+          mode: 'raw',
+          raw: '',
+          formdata: [{ key: '', value: '', type: 'text' }],
+          options: {
+            raw: {
+              language: 'json'
+            }
+          }
+        }
+      }
+      // Initialize formdata if it doesn't exist but body does
+      if (item.request.body && !item.request.body.formdata) {
+        item.request.body.formdata = [{ key: '', value: '', type: 'text' }]
+      }
+      // Add default headers if none exist
+      if (!item.request.header || item.request.header.length === 0) {
+        item.request.header = [
+          {
+            key: '',
+            value: '',
+            disabled: false
+          }
+        ]
+      }
     } else {
       console.log("NO SAVED STATE")
-      item = defaultCollection.item[0]
+      // Initialize default body with formdata for new items
+      if (item && item.request && !item.request.body) {
+        item.request.body = {
+          mode: 'raw',
+          raw: '',
+          formdata: [{ key: '', value: '', type: 'text' }],
+          options: {
+            raw: {
+              language: 'json'
+            }
+          }
+        }
+      }
     }
-    
   })
 
   function handleTabKey(event: KeyboardEvent) {
