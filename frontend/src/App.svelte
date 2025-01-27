@@ -16,8 +16,7 @@
   let tabs: Tab[] = [];
   let activeTabId: string | null = null;
   let selectedRequest: PostmanItem | null = null;
-  let collections = [] // Initialize as empty array
-  let importedCollection: PostmanCollection | null = null
+  let collections: PostmanCollection[] = []; 
   let currentItem: PostmanItem
 
   // Add state for expanded collections
@@ -29,47 +28,30 @@
   }
 
   function handleKeyDown(event: KeyboardEvent) {
-    if (event.ctrlKey && event.key === 's' && activeTabId !== null) {
+    if (event.ctrlKey && event.key === 's' && activeTabId !== null && currentItem) {
       event.preventDefault();
-
       console.log('Saving changes...');
-      
-      const collection = localStorage.getItem("collection_1")
-      if (!collection) {
-        const collectionToSave: PostmanCollection = {
-            id: "1",
-            name: "API Testing Collection",
-            item: [currentItem],
-            info: {
-                _postman_id: '',
-                name: '',
-                schema: '',
-                _exporter_id: '',
-                _collection_link: ''
+
+      for (const collection of collections) {
+        const itemIndex = collection.item.findIndex((item: PostmanItem) => item.id === currentItem.id);
+        if (itemIndex !== -1) {
+          collection.item[itemIndex] = currentItem;
+          localStorage.setItem(collection.info.name, JSON.stringify(collection));
+          
+          tabs = tabs.map(tab => {
+            if (tab.title === currentItem.name) {
+              return { ...tab, hasChanges: false };
             }
-        }
+            return tab;
+          });
 
-        localStorage.setItem('collection_1', JSON.stringify(collectionToSave))
-        return
-      } else {
-        const collObj = JSON.parse(collection)
-        const itemIndex = collObj.item.findIndex((item: PostmanItem) => item.id === currentItem.id)
-        if (itemIndex === -1) {
-          collObj.item.push(currentItem)
-        } else {
-          collObj.item[itemIndex] = currentItem
+          console.log(`Saved changes to collection: ${collection.info.name}`);
+          return;
         }
-        localStorage.setItem('collection_1', JSON.stringify(collObj))
       }
-
-      tabs = tabs.map(tab => {
-      if (tab.title === currentItem.name) {
-        let updatedTab = { ...tab, hasChanges: false };
-        console.log("Updated tab:", updatedTab);
-        return updatedTab;
-      }
-      return tab;
-    });
+      
+      // If we get here, the item wasn't found in any collection
+      console.warn('Could not find collection for this item');
     }
   }
 
@@ -78,37 +60,22 @@
     // Add event listener
     window.addEventListener('keydown', handleKeyDown);
 
-
-    // Get collection from localStorage
-    // const collection = localStorage.getItem("collection_1")
-    // if (collection) {
-    //   const collObj = JSON.parse(collection)
-    //   // Create tabs from collection items
-    //   console.log("TABS" , collObj.item)
-    // }
-
-    // GetCollections()
-    //   .then(response => {
-    //     collections = Array.isArray(response) ? response : []
-    //     console.log("Collections loaded:", collections)
-        
-    //     // Get collection from localStorage
-    //     const collection = localStorage.getItem("collection_1")
-    //     if (collection) {
-    //       const collObj = JSON.parse(collection)
-    //       // Create tabs from collection items
-    //       console.log("TABS" , collObj.item)
-    //     }
-    //   })
-    //   .catch(err => {
-    //     console.error("Failed to load collections:", err)
-    //     collections = []
-    //   })
-
-    // Load imported collection from localStorage
-    const savedCollection = localStorage.getItem("collection_1")
-    if (savedCollection) {
-      importedCollection = JSON.parse(savedCollection)
+    collections = [];
+    for(let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key) {
+        const value = localStorage.getItem(key);
+        if (value) {
+          try {
+            const collection = JSON.parse(value);
+            if (collection.info && collection.item) {
+              collections.push(collection);
+            }
+          } catch (error) {
+            console.error('Invalid collection in localStorage:', key);
+          }
+        }
+      }
     }
 
     // Clean up event listener
@@ -219,19 +186,18 @@
 
     try {
       const text = await file.text();
-      const collection = JSON.parse(text);
+      const collection: PostmanCollection = JSON.parse(text);
 
-      // Basic validation that it's a Postman collection
       if (!collection.info || !collection.item) {
         throw new Error('Invalid Postman collection format');
       }
 
-      // Store in localStorage
-      localStorage.setItem('collection_1', text);
-      // Reset file input
+      localStorage.setItem(collection.info.name, text);
       target.value = '';
       
       alert('Collection imported successfully!');
+
+      collections = [...collections, collection];
     } catch (error) {
       console.error('Error importing collection:', error);
       alert('Failed to import collection. Please make sure it\'s a valid Postman collection file.');
@@ -318,30 +284,30 @@
 
       <!-- Replace Dynamic Collection List with Imported Collection Items -->
       <div class="space-y-4">
-        {#if importedCollection}
+        {#each collections as collection}
           <div class="space-y-2">
             <!-- svelte-ignore a11y-click-events-have-key-events -->
             <div 
               class="flex items-center justify-between p-2 hover:bg-gray-700 rounded-lg cursor-pointer"
-              on:click={() => importedCollection && toggleCollection(importedCollection.info._postman_id)}
+              on:click={() => toggleCollection(collection.info._postman_id)}
             >
               <div class="flex items-center">
                 <svg 
                   xmlns="http://www.w3.org/2000/svg" 
-                  class="h-4 w-4 mr-2 transform transition-transform {expandedCollections[importedCollection.info._postman_id] ? 'rotate-90' : ''}" 
+                  class="h-4 w-4 mr-2 transform transition-transform {expandedCollections[collection.info._postman_id] ? 'rotate-90' : ''}" 
                   viewBox="0 0 20 20" 
                   fill="currentColor"
                 >
-                  <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                  <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a 1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
                 </svg>
-                <span class="text-gray-300 font-medium">{importedCollection.info.name}</span>
+                <span class="text-gray-300 font-medium">{collection.info.name}</span>
               </div>
-              <span class="text-xs text-gray-500">{importedCollection.item?.length || 0} requests</span>
+              <span class="text-xs text-gray-500">{collection.item?.length || 0} requests</span>
             </div>
             
-            {#if expandedCollections[importedCollection.info._postman_id]}
+            {#if expandedCollections[collection.info._postman_id]}
               <div class="pl-4 space-y-1 transition-all">
-                {#each importedCollection.item || [] as request}
+                {#each collection.item || [] as request}
                   <!-- svelte-ignore a11y-click-events-have-key-events -->
                   <div 
                     class="w-full text-left px-2 py-1 rounded hover:bg-gray-700 flex items-center group cursor-pointer {selectedRequest?.id === request.id ? 'bg-gray-700' : ''}"
@@ -354,7 +320,7 @@
               </div>
             {/if}
           </div>
-        {/if}
+        {/each}
       </div>
 
       <!-- Comment out original collections section -->
