@@ -4,11 +4,12 @@
   import { onMount } from 'svelte'
   import { GetCollections, CreateCollection } from '../wailsjs/go/main/App.js'
   import Modal from './components/Modal.svelte'
-  import type { PostmanCollection, PostmanItem } from './types/postman.ts';
+  import type { PostmanCollection, PostmanItem, Variable } from './types/postman.ts';
 
   interface Tab {
     id: string;
     request: PostmanItem;
+    variable: Variable[];
     title: string;
     hasChanges: boolean; 
   }
@@ -85,12 +86,13 @@
   })
 
   // Function to handle request item click
-  function handleRequestClick(request: PostmanItem) {
+  function handleRequestClick(request: PostmanItem, variable: Variable[]) {
     const newTab: Tab = {
       id: Date.now().toString(),
       request: request,
       title: request.name,
-      hasChanges: false
+      hasChanges: false,
+      variable: variable
     };
 
     // Check if tab already exists
@@ -311,7 +313,7 @@
                   <!-- svelte-ignore a11y-click-events-have-key-events -->
                   <div 
                     class="w-full text-left px-2 py-1 rounded hover:bg-gray-700 flex items-center group cursor-pointer {selectedRequest?.id === request.id ? 'bg-gray-700' : ''}"
-                    on:click={() => handleRequestClick(request)}
+                    on:click={() => handleRequestClick(request, collection.variable)}
                   >
                     <span class="text-xs font-medium {getMethodColor(request.request.method)} w-12 flex-shrink-0">{request.request.method}</span>
                     <span class="text-gray-400 text-sm truncate flex-1 min-w-0">{request.name}</span>
@@ -400,6 +402,7 @@
               <RequestTab 
                 tabID={tab.request.id}
                 savedState={tab.request}
+                variable={tab.variable}
                 onStateChange={onStateChange}
               />
             {/if}

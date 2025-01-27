@@ -62,7 +62,7 @@ export interface PostmanItem {
   response: any[];
 }
 
-export interface PostmanCollection {
+export interface  PostmanCollection {
   id: string;
   name: string;
   info: {
@@ -73,8 +73,14 @@ export interface PostmanCollection {
     _collection_link: string;
   };
   item: PostmanItem[];
+  variable: Variable[];
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface Variable {
+  key: string;
+  value: string;
 }
 
 export interface TabState {

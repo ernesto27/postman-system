@@ -1,14 +1,29 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { MakeRequest } from '../../wailsjs/go/main/App.js'
-  import type { PostmanCollection, PostmanRequest, PostmanItem } from '../types/postman.ts';
+  import type { PostmanCollection, PostmanRequest, PostmanItem, Variable } from '../types/postman.ts';
 
+  // Add utility functions for formatting
+  function formatTime(seconds: number): string {
+    if (seconds < 0.001) return '0ms';
+    if (seconds < 1) return `${Math.round(seconds * 1000)}ms`;
+    return `${seconds.toFixed(2)}s`;
+  }
+
+  function formatSize(bytes: number): string {
+    if (bytes === 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    const exp = Math.floor(Math.log(bytes) / Math.log(1024));
+    const size = bytes / Math.pow(1024, exp);
+    return `${size.toFixed(1)} ${units[exp]}`;
+  }
 
   export let tabID: string
   export let savedState: PostmanItem | null = null
   export let onStateChange = (state) => {
     console.log(state)
   }
+  export let variable: Variable[]
 
   const methods = ['GET', 'POST', 'PUT', 'DELETE']
   let isLoading = false
@@ -206,6 +221,8 @@
           }
         ]
       }
+
+      item.request.url.raw = parseUrlVariable(item.request.url.raw)
     } else {
       console.log("NO SAVED STATE")
       // Initialize default body with formdata for new items
@@ -336,6 +353,16 @@
   function toggleHeaderEnabled(header) {
     header.disabled = !header.disabled;
   }
+
+  function parseUrlVariable(url: string): string {
+    if (!url || !variable) return url;
+    
+    return url.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
+      const foundVar = variable.find(v => v.key === key);
+      return foundVar ? foundVar.value : match;
+    });
+  }
+
 </script>
 
 <div class="bg-gray-800 rounded-lg p-4">
