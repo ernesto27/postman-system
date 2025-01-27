@@ -119,13 +119,21 @@
 
   // Function to handle request item click
   function handleRequestClick(request: PostmanItem) {
-    // Always open a new tab for any request clicked
-    const newTab = {
-      id: Date.now(),
+    const newTab: Tab = {
+      id: Date.now().toString(),
       request: request,
       title: request.name,
       hasChanges: false
     };
+
+    // Check if tab already exists
+    const existingTab = tabs.find(tab => tab.title === request.name);
+    if (existingTab) {
+      activeTabId = existingTab.id;
+      selectedRequest = existingTab.request;
+      return;
+    }
+
     tabs = [...tabs, newTab];
     activeTabId = newTab.id;
     selectedRequest = request;
