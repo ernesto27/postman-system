@@ -20,10 +20,17 @@ export interface FormDataItem {
 export interface PostmanUrl {
   raw: string;
   protocol: string;
-  host: string[];
+  host: string[] | string;
   port: string;
   path: string[];
   query?: QueryParam[];
+  variable?: UrlVariable[];
+}
+
+export interface UrlVariable {
+  key: string;
+  value: string;
+  description?: string;
 }
 
 export interface QueryParam {
@@ -33,10 +40,15 @@ export interface QueryParam {
 }
 
 export interface PostmanAuth {
-  type: 'bearer';
-  bearer: Array<{
+  type: 'bearer' | 'apikey' | 'oauth2';
+  bearer?: Array<{
     key: string;
     value: string;
+    type: string;
+  }>;
+  apikey?: Array<{
+    key: string;
+    value: string | boolean;
     type: string;
   }>;
 }
@@ -46,7 +58,8 @@ export interface PostmanRequest {
   method: 'GET' | 'POST' | 'PUT' | 'DELETE';
   header: HeaderItem[];
   body?: PostmanRequestBody;
-  url: PostmanUrl;
+  url: PostmanUrl | string;
+  description?: string;
 }
 
 export interface HeaderItem {
@@ -56,24 +69,27 @@ export interface HeaderItem {
 }
 
 export interface PostmanItem {
-  id: string;
+  id?: string;
   name: string;
-  request: PostmanRequest;
-  response: any[];
+  request?: PostmanRequest;
+  response?: any[];
+  item?: PostmanItem[];
+  description?: string;
 }
 
-export interface  PostmanCollection {
+export interface PostmanCollection {
   id: string;
   name: string;
   info: {
     _postman_id: string;
     name: string;
+    description?: string;
     schema: string;
-    _exporter_id: string;
-    _collection_link: string;
+    _exporter_id?: string;
+    _collection_link?: string;
   };
   item: PostmanItem[];
-  variable: Variable[];
+  variable?: Variable[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -116,4 +132,15 @@ export interface PostmanHistoryItem {
     time: number;
     size: number;
   };
+}
+
+export interface PostmanResponse {
+  name: string;
+  originalRequest: PostmanRequest;
+  status?: string;
+  code: number;
+  _postman_previewlanguage?: string;
+  header: HeaderItem[];
+  cookie: any[];
+  body: any;
 }
