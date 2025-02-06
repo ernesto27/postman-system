@@ -70,6 +70,7 @@
           try {
             const collection = JSON.parse(value);
             if (collection.info && collection.item) {
+              console.log('collection ', collection)
               collections.push(collection);
             }
           } catch (error) {
@@ -309,43 +310,29 @@
             
             {#if expandedCollections[collection.info._postman_id]}
               <div class="pl-4 space-y-1 transition-all">
-                {#each collection.item || [] as request}
-                  <!-- svelte-ignore a11y-click-events-have-key-events -->
-                  <div 
-                    class="w-full text-left px-2 py-1 rounded hover:bg-gray-700 flex items-center group cursor-pointer {selectedRequest?.id === request.id ? 'bg-gray-700' : ''}"
-                    on:click={() => handleRequestClick(request, collection.variable)}
-                  >
-                    <span class="text-xs font-medium {getMethodColor(request.request.method)} w-12 flex-shrink-0">{request.request.method}</span>
-                    <span class="text-gray-400 text-sm truncate flex-1 min-w-0">{request.name}</span>
-                  </div>
-                {/each}
+                {#each collection.item || [] as item}
+                <!-- svelte-ignore a11y-click-events-have-key-events -->
+                <div 
+                class="w-full text-left px-2 py-1 rounded hover:bg-gray-700 flex items-center group cursor-pointer {selectedRequest?.id === item.id ? 'bg-gray-700' : ''}"
+                on:click={() => handleRequestClick(item, collection.variable)}
+                >
+                {#if item.item}
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M4 3a1 1 0 00-1 1v12a1 1 0 001 1h12a1 1 0 001-1V4a1 1 0 00-1-1H4zm1 2h10v10H5V5z" clip-rule="evenodd" />
+                  </svg>
+                {:else}
+                  <span class="text-xs font-medium {getMethodColor(item.request.method)} w-12 flex-shrink-0">{item.request.method} ddd</span>
+                {/if}
+                <span class="text-gray-400 text-sm truncate flex-1 min-w-0">{item.name}</span>
+                </div>
+                
+              {/each}
               </div>
             {/if}
           </div>
         {/each}
       </div>
 
-      <!-- Comment out original collections section -->
-      <!-- <div class="space-y-4">
-        {#each collections as collection}
-          <div class="space-y-2">
-            <div class="flex items-center">
-              <span class="text-gray-300 font-medium">{collection.name}</span>
-            </div>
-            <div class="pl-4 space-y-1">
-              {#each collection.requests as request}
-                <div class="w-full text-left px-2 py-1 rounded hover:bg-gray-700 flex items-center">
-                  <span class="text-xs font-medium {request.method === 'GET' ? 'text-blue-400' : 
-                    request.method === 'POST' ? 'text-green-400' : 
-                    request.method === 'PUT' ? 'text-yellow-400' : 
-                    request.method === 'DELETE' ? 'text-red-400' : 'text-gray-400'} w-12">{request.method}</span>
-                  <span class="text-gray-400 text-sm truncate">{request.name}</span>
-                </div>
-              {/each}
-            </div>
-          </div>
-        {/each}
-      </div> -->
     </div>
   </div>
 
