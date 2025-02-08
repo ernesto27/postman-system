@@ -5,6 +5,7 @@
   import { GetCollections, CreateCollection } from '../wailsjs/go/main/App.js'
   import Modal from './components/Modal.svelte'
   import type { PostmanCollection, PostmanItem, Variable } from './types/postman.ts';
+  import CollectionItem from './components/CollectionItem.svelte';
 
   interface Tab {
     id: string;
@@ -301,7 +302,7 @@
                   viewBox="0 0 20 20" 
                   fill="currentColor"
                 >
-                  <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a 1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                  <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a 1 1 0 010 1.414l-4 4a 1 1 0 01-1.414 0z" clip-rule="evenodd" />
                 </svg>
                 <span class="text-gray-300 font-medium">{collection.info.name}</span>
               </div>
@@ -309,24 +310,17 @@
             </div>
             
             {#if expandedCollections[collection.info._postman_id]}
-              <div class="pl-4 space-y-1 transition-all">
+              <div class="pl-4 space-y-1">
                 {#each collection.item || [] as item}
-                <!-- svelte-ignore a11y-click-events-have-key-events -->
-                <div 
-                class="w-full text-left px-2 py-1 rounded hover:bg-gray-700 flex items-center group cursor-pointer {selectedRequest?.id === item.id ? 'bg-gray-700' : ''}"
-                on:click={() => handleRequestClick(item, collection.variable)}
-                >
-                {#if item.item}
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M4 3a1 1 0 00-1 1v12a1 1 0 001 1h12a1 1 0 001-1V4a1 1 0 00-1-1H4zm1 2h10v10H5V5z" clip-rule="evenodd" />
-                  </svg>
-                {:else}
-                  <span class="text-xs font-medium {getMethodColor(item.request.method)} w-12 flex-shrink-0">{item.request.method} ddd</span>
-                {/if}
-                <span class="text-gray-400 text-sm truncate flex-1 min-w-0">{item.name}</span>
-                </div>
-                
-              {/each}
+                  <CollectionItem
+                    {item}
+                    level={0}
+                    variables={collection.variable}
+                    {selectedRequest}
+                    {expandedCollections}
+                    {handleRequestClick}
+                  />
+                {/each}
               </div>
             {/if}
           </div>

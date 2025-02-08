@@ -328,6 +328,8 @@
         responseStatus = response.status
         responseTime = response.timeInSeconds
         responseSize = response.responseSize
+
+        responseData = JSON.stringify(JSON.parse(responseData), null, 2)
       })
       .catch(err => {
         console.error(err)
@@ -625,7 +627,7 @@
       <div class="bg-gray-900 rounded-lg p-4">
         <div class="max-h-[600px] max-w-[1200px] overflow-y-auto overflow-x-auto break-word">
           {#if activeResponseTab === 'response'}
-            <pre class="text-xs overflow-x-auto"><code class="language-auto">{isLoading ? 'Loading...' : responseData}</code></pre>
+            <pre class="text-xs overflow-x-auto"><code class="language-auto">{isLoading ? 'Loading...' : responseData }</code></pre>
           {:else if activeResponseTab === 'headers'}
             <pre class="text-xs overflow-x-auto"><code class="language-auto">{isLoading ? 'Loading...' : JSON.stringify(responseHeaders, null, 2)}</code></pre>
           {/if}
