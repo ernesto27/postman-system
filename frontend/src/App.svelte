@@ -26,6 +26,7 @@
 
   // Toggle collection expansion
   function toggleCollection(collectionId: string) {
+    tabs = [];
     expandedCollections[collectionId] = !expandedCollections[collectionId];
   }
 
